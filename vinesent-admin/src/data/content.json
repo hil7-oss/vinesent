@@ -1,0 +1,40 @@
+{
+  "banners": [
+    {
+      "id": "f4f85b68-9682-43e3-9ea1-ea636a51c36c",
+      "title": "ГРАНДІОЗНЕ ВІДКРИТТЯ!",
+      "subtitle": "Завітайте до нашого нового магазину за адресою: вул. Василя Порика, 2. На вас чекають приємні ціни, широкий асортимент та святкові знижки! Чекаємо саме на вас!",
+      "image": "/uploads/1773257163_Gemini_Generated_Image_5edbe25edbe25edb.png",
+      "link": "",
+      "position": "hero",
+      "active": true
+    },
+    {
+      "id": "db5b0e7f-0466-4d3b-92bd-ee943f7ee259",
+      "title": "ВЕСНЯНА КОЛЕКЦИЯ",
+      "subtitle": "",
+      "image": "/uploads/1773257293_Gemini_Generated_Image_5edbe25edbe25edb.png",
+      "link": "",
+      "position": "hero",
+      "active": true
+    }
+  ],
+  "collections": [
+    {
+      "id": "fojk5a7qzdn",
+      "key": "NEW",
+      "title": "NEW",
+      "description": "Новинки",
+      "productIds": []
+    },
+    {
+      "id": "5ddbb020-e0d8-43d1-bcea-2aa56f7f4597",
+      "key": "SALE",
+      "title": "SALE",
+      "description": "",
+      "productIds": []
+    }
+  ],
+  "navigation": [],
+  "updatedAt": "2026-03-11T19:28:14.744132"
+}

@@ -1,0 +1,260 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator client_py {
+  provider = "prisma-client-py"
+  interface = "asyncio"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  firstName String?
+  lastName  String?
+  phone     String?
+  role      String   @default("USER")
+  orders    Order[]
+  cart      Cart?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  image       String?
+  products    Product[]  @relation("ProductCategories")
+  legacyProducts Product[] @relation("LegacyCategory")
+  parentId    String?
+  parent      Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryToCategory")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  price       Decimal
+  salePrice   Decimal?
+  cost        Decimal   @default(0)
+  images      String
+  stock       Int       @default(0)
+  isArchived  Boolean   @default(false)
+  seoTitle    String?
+  seoDescription String?
+  categoryId  String?
+  category    Category? @relation("LegacyCategory", fields: [categoryId], references: [id])
+  categories  Category[] @relation("ProductCategories")
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
+  variants    ProductVariant[]
+  generatedPhotos GeneratedPhoto[]
+  relatedProducts Product[] @relation("RelatedProducts")
+  relatedTo       Product[] @relation("RelatedProducts")
+  setProducts     Product[] @relation("ProductSets")
+  setsIncludedIn  Product[] @relation("ProductSets")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id])
+  status    String      @default("PENDING") // PENDING, PAID, SHIPPED, COMPLETED, CANCELLED
+  paymentMethod String  @default("CARD") // CARD, CASH
+  source    String      @default("ONLINE") // ONLINE, POS
+  total     Decimal
+  liqpayStatus String?
+  customerFirstName String?
+  customerLastName  String?
+  customerPhone     String?
+  customerEmail     String?
+  deliveryMethod    String?
+  deliveryCity      String?
+  deliveryBranch    String?
+  deliveryAddress   String?
+  pickupLocationId  String?
+  items     OrderItem[]
+  statusHistory OrderStatusHistory[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+  quantity  Int
+  price     Decimal
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?    @unique
+  user      User?      @relation(fields: [userId], references: [id])
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+}
+
+model Statistics {
+  id           String   @id @default(cuid())
+  date         DateTime @unique @default(now())
+  totalOrders  Int      @default(0)
+  totalRevenue Decimal  @default(0)
+  activeUsers  Int      @default(0)
+}
+
+model OrderStatusHistory {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  status    String
+  changedAt DateTime @default(now())
+  changedBy String?
+}
+
+model ProductVariant {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  size       String?
+  color      String?
+  sku        String   @unique
+  barcode    String?  @unique
+  price      Decimal?
+  salePrice  Decimal?
+  cost       Decimal?
+  stock      Int      @default(0)
+  images     String?
+  inventory  Inventory[]
+  movements  StockMovement[]
+  orderItems OrderItem[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  name      String
+  city      String?
+  address   String?
+  mapsUrl   String?
+  inventory Inventory[]
+  movements StockMovement[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Inventory {
+  id        String         @id @default(cuid())
+  storeId   String
+  store     Store          @relation(fields: [storeId], references: [id])
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  stock     Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model StockMovement {
+  id        String         @id @default(cuid())
+  storeId   String
+  store     Store          @relation(fields: [storeId], references: [id])
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  type      String         // RECEIPT | SALE | RETURN | ADJUSTMENT | TRANSFER
+  quantity  Int
+  reference String?
+  actorId   String?
+  note      String?
+  createdAt DateTime       @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  action     String    // CREATE | UPDATE | DELETE
+  userId     String?
+  meta       String?
+  createdAt  DateTime  @default(now())
+}
+
+// AI Integration Models
+
+model PromptTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String
+  category    String   // "pants", "tshirt", "jacket", "dress", "skirt"
+  gender      String   // "male", "female", "unisex"
+  templateText String  @db.Text @map("template_text")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  generatedPhotos GeneratedPhoto[]
+
+  @@map("prompt_templates")
+}
+
+model GeneratedPhoto {
+  id                 Int      @id @default(autoincrement())
+  productId          String   @map("product_id") // Changed from Int to String to match Product.id (cuid)
+  promptTemplateId   Int?     @map("prompt_template_id")
+  cloudinaryUrl      String   @map("cloudinary_url")
+  cloudinaryPublicId String   @map("cloudinary_public_id")
+  gender             String   // "male" / "female"
+  colorHex           String   @map("color_hex")
+  colorName          String   @map("color_name")
+  status             String   @default("processing") // "processing" | "done" | "failed"
+  errorMessage       String?  @db.Text @map("error_message")
+  batchJobId         String?  @map("batch_job_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  product        Product        @relation(fields: [productId], references: [id])
+  promptTemplate PromptTemplate? @relation(fields: [promptTemplateId], references: [id])
+
+  @@map("generated_photos")
+}
+
+model BatchJob {
+  id        String   @id @default(uuid())
+  total     Int
+  done      Int      @default(0)
+  failed    Int      @default(0)
+  status    String   @default("running") // "running" | "completed" | "partial"
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("batch_jobs")
+}

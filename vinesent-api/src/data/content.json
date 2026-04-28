@@ -1,0 +1,60 @@
+{
+  "banners": [
+    {
+      "id": "f4f85b68-9682-43e3-9ea1-ea636a51c36c",
+      "title": "ГРАНДІОЗНЕ ВІДКРИТТЯ!",
+      "subtitle": "Завітайте до нашого нового магазину за адресою: вул. Василя Порика, 2. На вас чекають приємні ціни, широкий асортимент та святкові знижки! Чекаємо саме на вас!",
+      "image": "/uploads/1773257163_Gemini_Generated_Image_5edbe25edbe25edb.png",
+      "link": "",
+      "position": "hero",
+      "active": true
+    },
+    {
+      "id": "db5b0e7f-0466-4d3b-92bd-ee943f7ee259",
+      "title": "ВЕСНЯНА КОЛЕКЦИЯ",
+      "subtitle": "",
+      "image": "/uploads/1773257293_Gemini_Generated_Image_5edbe25edbe25edb.png",
+      "link": "",
+      "position": "hero",
+      "active": true
+    }
+  ],
+  "collections": [
+    {
+      "id": "fojk5a7qzdn",
+      "key": "NEW",
+      "title": "NEW",
+      "description": "Новинки",
+      "productIds": [
+        "a18da648-b79a-4d11-adaf-c593336bd666",
+        "d71298e3-8a6e-4364-8e92-7c153154be16",
+        "7458dae4-abdd-46a3-b36c-0603651bf205",
+        "767c62ed-e5b7-4feb-bfa1-980320237040",
+        "a03173c2-5725-4bd7-9534-91f8ec14062e",
+        "31ee9984-89eb-4dad-b85b-e7ca92efa1e6",
+        "c99be3a8-4d1f-460c-8764-459ec7183e98",
+        "18b33b7a-ced4-4a7e-a7c9-d576aa05658c",
+        "73c01b2a-2a56-4764-8528-4d9db8df0c2d",
+        "b2623bda-9ba9-44bf-9fe6-1db94a53d036",
+        "83a5a0ad-5597-42e0-ae2d-d854416d75f2",
+        "fe234ab1-2d00-4046-b7ec-c7d227998a20"
+      ]
+    },
+    {
+      "id": "0bdb9483-18e4-4ba6-9531-cf243f06cbaf",
+      "key": "CASUAL",
+      "title": "CASUAL",
+      "description": "Повсякденний одяг",
+      "productIds": []
+    },
+    {
+      "id": "5ddbb020-e0d8-43d1-bcea-2aa56f7f4597",
+      "key": "SALE",
+      "title": "SALE",
+      "description": "",
+      "productIds": []
+    }
+  ],
+  "navigation": [],
+  "updatedAt": "2026-03-11T19:28:14.744132"
+}

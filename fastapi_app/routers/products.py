@@ -1,0 +1,265 @@
+"""
+Products router - CRUD operations for products
+"""
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+from sqlalchemy import text, or_
+import json
+
+from ..database import get_db
+from ..dependencies import require_admin
+
+router = APIRouter(prefix="/products", tags=["products"])
+
+
+@router.get("")
+def get_products(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    sale: Optional[bool] = None,
+    new: Optional[bool] = None,
+    includeOutOfStock: bool = False,
+    db: Session = Depends(get_db),
+):
+    """Get all products with optional filters"""
+    query = 'SELECT * FROM "Product"'
+    conditions = []
+    params = {}
+
+    if not includeOutOfStock:
+        conditions.append('stock > 0')
+    
+    if category:
+        conditions.append('"categoryId" = :category')
+        params['category'] = category
+    
+    if search:
+        conditions.append('(LOWER(name) LIKE :search OR LOWER(description) LIKE :search)')
+        params['search'] = f'%{search.lower()}%'
+    
+    if sale:
+        conditions.append('"salePrice" IS NOT NULL AND "salePrice" > 0')
+    
+    if new:
+        conditions.append('"createdAt" >= NOW() - INTERVAL \'30 days\'')
+    
+    if conditions:
+        query += ' WHERE ' + ' AND '.join(conditions)
+    
+    query += ' ORDER BY "createdAt" DESC LIMIT :limit OFFSET :skip'
+    params['limit'] = limit
+    params['skip'] = skip
+
+    rows = db.execute(text(query), params).mappings().all()
+    return [dict(row) for row in rows]
+
+
+@router.get("/{product_id}")
+def get_product(product_id: str, db: Session = Depends(get_db)):
+    """Get a single product by ID"""
+    row = db.execute(
+        text('SELECT * FROM "Product" WHERE id = :id'),
+        {"id": product_id}
+    ).mappings().first()
+    
+    if not row:
+        raise HTTPException(404, "Product not found")
+    
+    return dict(row)
+
+
+@router.post("", dependencies=[Depends(require_admin)])
+def create_product(product: dict, db: Session = Depends(get_db)):
+    """Create a new product"""
+    import uuid
+    
+    name = product.get('name', '')
+    slug = product.get('slug', '')
+    price = product.get('price', 0)
+    sale_price = product.get('salePrice')
+    cost = product.get('cost', 0)
+    stock = product.get('stock', 0)
+    description = product.get('description', '')
+    category_id = product.get('categoryId')
+    images = product.get('images', '[]')
+    seo_title = product.get('seoTitle', '')
+    seo_description = product.get('seoDescription', '')
+    category_ids = product.get('categoryIds', [])
+    
+    if not name:
+        raise HTTPException(400, "Name is required")
+    
+    product_id = str(uuid.uuid4())
+    
+    if not slug:
+        from ..services.slug_service import build_product_slug, ensure_unique_product_slug
+        base_slug = build_product_slug(name, slug)
+        slug = ensure_unique_product_slug(db, base_slug)
+    
+    result = db.execute(
+        text('''
+            INSERT INTO "Product" 
+            (id, name, slug, price, "salePrice", cost, stock, description, "categoryId", images, "seoTitle", "seoDescription", "createdAt", "updatedAt")
+            VALUES (:id, :name, :slug, :price, :sale_price, :cost, :stock, :description, :category_id, :images, :seo_title, :seo_description, NOW(), NOW())
+            RETURNING *
+        '''),
+        {
+            'id': product_id,
+            'name': name,
+            'slug': slug,
+            'price': price,
+            'sale_price': sale_price,
+            'cost': cost,
+            'stock': stock,
+            'description': description,
+            'category_id': category_id,
+            'images': images if isinstance(images, str) else json.dumps(images),
+            'seo_title': seo_title,
+            'seo_description': seo_description,
+        }
+    ).mappings().first()
+    
+    if category_ids and isinstance(category_ids, list):
+        for cat_id in category_ids:
+            if cat_id:
+                db.execute(
+                    text('INSERT INTO "_ProductCategories" ("A", "B") VALUES (:category_id, :product_id)'),
+                    {'category_id': cat_id, 'product_id': product_id}
+                )
+    
+    db.commit()
+    return dict(result)
+
+
+@router.put("/{product_id}", dependencies=[Depends(require_admin)])
+def update_product(product_id: str, product: dict, db: Session = Depends(get_db)):
+    """Update a product"""
+    existing = db.execute(
+        text('SELECT id FROM "Product" WHERE id = :id'),
+        {"id": product_id}
+    ).first()
+    
+    if not existing:
+        raise HTTPException(404, "Product not found")
+    
+    updates = []
+    params = {'id': product_id}
+    
+    allowed_fields = {
+        'name': 'name',
+        'slug': 'slug',
+        'price': 'price',
+        'salePrice': 'sale_price',
+        'cost': 'cost',
+        'stock': 'stock',
+        'description': 'description',
+        'categoryId': 'category_id',
+        'images': 'images',
+        'seoTitle': 'seo_title',
+        'seoDescription': 'seo_description',
+        'isArchived': 'is_archived',
+    }
+    
+    for field, param_name in allowed_fields.items():
+        if field in product:
+            value = product[field]
+            if field == 'images' and not isinstance(value, str):
+                value = json.dumps(value)
+            updates.append(f'"{field}" = :{param_name}')
+            params[param_name] = value
+    
+    if not updates:
+        raise HTTPException(400, "No fields to update")
+    
+    category_ids = product.get('categoryIds')
+    if category_ids and isinstance(category_ids, list):
+        db.execute(
+            text('DELETE FROM "_ProductCategories" WHERE "B" = :product_id'),
+            {'product_id': product_id}
+        )
+        for cat_id in category_ids:
+            if cat_id:
+                db.execute(
+                    text('INSERT INTO "_ProductCategories" ("A", "B") VALUES (:category_id, :product_id)'),
+                    {'category_id': cat_id, 'product_id': product_id}
+                )
+    
+    query = f'UPDATE "Product" SET {", ".join(updates)} WHERE id = :id RETURNING *'
+    result = db.execute(text(query), params).mappings().first()
+    db.commit()
+    
+    return dict(result)
+
+
+@router.delete("/{product_id}", dependencies=[Depends(require_admin)])
+def delete_product(product_id: str, db: Session = Depends(get_db)):
+    """Delete a product"""
+    result = db.execute(
+        text('DELETE FROM "Product" WHERE id = :id RETURNING id'),
+        {"id": product_id}
+    ).first()
+    
+    if not result:
+        raise HTTPException(404, "Product not found")
+    
+    db.commit()
+    return {"success": True, "id": product_id}
+
+
+@router.get("/{product_id}/related")
+def get_related_products(product_id: str, db: Session = Depends(get_db)):
+    """Get related products and set products"""
+    product = db.execute(
+        text('SELECT id FROM "Product" WHERE id = :id'),
+        {"id": product_id}
+    ).first()
+    
+    if not product:
+        raise HTTPException(404, "Product not found")
+    
+    return {"relatedProductIds": [], "setProductIds": []}
+
+
+@router.put("/{product_id}/related", dependencies=[Depends(require_admin)])
+def update_related_products(product_id: str, data: dict, db: Session = Depends(get_db)):
+    """Update related products and set products"""
+    product = db.execute(
+        text('SELECT id FROM "Product" WHERE id = :id'),
+        {"id": product_id}
+    ).first()
+    
+    if not product:
+        raise HTTPException(404, "Product not found")
+    
+    return {"success": True}
+
+
+@router.get("/{product_id}/measurements")
+def get_measurements(product_id: str, db: Session = Depends(get_db)):
+    """Get product measurements"""
+    product = db.execute(
+        text('SELECT id FROM "Product" WHERE id = :id'),
+        {"id": product_id}
+    ).first()
+    
+    if not product:
+        raise HTTPException(404, "Product not found")
+    
+    return {"measurements": {}}
+
+
+@router.put("/{product_id}/measurements", dependencies=[Depends(require_admin)])
+def update_measurements(product_id: str, measurements: dict, db: Session = Depends(get_db)):
+    """Update product measurements"""
+    product = db.execute(
+        text('SELECT id FROM "Product" WHERE id = :id'),
+        {"id": product_id}
+    ).first()
+    
+    if not product:
+        raise HTTPException(404, "Product not found")
+    
+    return {"success": True}

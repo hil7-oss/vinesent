@@ -1,0 +1,167 @@
+services:
+  # База данных PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: vinesent
+      POSTGRES_USER: vinesent
+      POSTGRES_PASSWORD: vinesent
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vinesent -d vinesent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - vinesent-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - vinesent-network
+
+  # Применение миграций Prisma
+  # ВАЖНО: миграции применяются ПОСЛЕ загрузки backup — это нормально,
+  # Prisma проверит что нужно и пропустит уже существующие
+  db-migrate:
+    build:
+      context: ./vinesent-storefront
+      dockerfile: Dockerfile
+      target: migrate
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://vinesent:vinesent@postgres:5432/vinesent
+    networks:
+      - vinesent-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: .
+      dockerfile: fastapi_app/Dockerfile
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql://vinesent:vinesent@postgres:5432/vinesent
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: dev-secret-key-change-in-production
+      JWT_ALGORITHM: HS256
+      CORS_ALLOW_ORIGINS: http://localhost:3000,http://localhost:3001
+      TRUSTED_HOSTS: localhost,127.0.0.1,backend
+      RATE_LIMIT_UPLOAD_PER_MINUTE: 2000
+      MAX_UPLOAD_BYTES: 10485760
+      GOOGLE_APPLICATION_CREDENTIALS_B64: ${GOOGLE_APPLICATION_CREDENTIALS_B64:-}
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GEMINI_TEXT_MODEL: ${GEMINI_TEXT_MODEL:-gemini-2.0-flash}
+      GEMINI_LOCATION: ${GEMINI_LOCATION:-us-central1}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@vineshop.com}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      LIQPAY_PUBLIC_KEY: ${LIQPAY_PUBLIC_KEY:-}
+      LIQPAY_PRIVATE_KEY: ${LIQPAY_PRIVATE_KEY:-}
+      LIQPAY_CALLBACK_URL: ${LIQPAY_CALLBACK_URL:-http://localhost:8000/liqpay/callback}
+      LIQPAY_RESULT_BASE: ${LIQPAY_RESULT_BASE:-http://localhost:3000}
+      LIQPAY_CURRENCY: ${LIQPAY_CURRENCY:-UAH}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./fastapi_app:/app/fastapi_app
+      - ./fastapi_app/uploads:/app/fastapi_app/uploads
+    networks:
+      - vinesent-network
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Next.js Storefront (Магазин)
+  storefront:
+    build:
+      context: ./vinesent-storefront
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+        FASTAPI_URL: http://backend:8000
+        NEXT_PUBLIC_FASTAPI_URL: http://localhost:8000
+        RATE_LIMIT_PER_MINUTE: 600
+        REDIS_URL: redis://redis:6379/0
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://vinesent:vinesent@postgres:5432/vinesent
+      FASTAPI_URL: http://backend:8000
+      NEXT_PUBLIC_FASTAPI_URL: http://localhost:8000
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
+      NEXT_PUBLIC_GTM_ID: ${NEXT_PUBLIC_GTM_ID:-}
+      NEXT_PUBLIC_META_PIXEL_ID: ${NEXT_PUBLIC_META_PIXEL_ID:-}
+      REDIS_URL: redis://redis:6379/0
+      RATE_LIMIT_PER_MINUTE: 600
+    ports:
+      - "3000:3000"
+    networks:
+      - vinesent-network
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      backend:
+        condition: service_started
+    restart: unless-stopped
+
+  # Next.js Admin (Админка)
+  admin:
+    build:
+      context: ./vinesent-admin
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+        FASTAPI_URL: http://backend:8000
+        NEXT_PUBLIC_FASTAPI_URL: http://localhost:8000
+        RATE_LIMIT_PER_MINUTE: 600
+        REDIS_URL: redis://redis:6379/0
+    environment:
+      NODE_ENV: production
+      FASTAPI_URL: http://backend:8000
+      NEXT_PUBLIC_FASTAPI_URL: http://localhost:8000
+      REDIS_URL: redis://redis:6379/0
+      RATE_LIMIT_PER_MINUTE: 600
+    ports:
+      - "3001:3000"
+    networks:
+      - vinesent-network
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      backend:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  vinesent-network:
+    driver: bridge
