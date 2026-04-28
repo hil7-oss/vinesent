@@ -50,6 +50,10 @@ def _error_payload(code: int, message: str, request: Request, details: dict | No
 def create_app() -> FastAPI:
     app = FastAPI(title="Vinesent API", version="1.0.0")
 
+    # Initialize content and categories on startup
+    from .services.content_service import seed_all  # noqa: E402
+    seed_all()
+
     os.makedirs(UPLOADS_DIR, exist_ok=True)
     app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
@@ -101,8 +105,11 @@ def create_app() -> FastAPI:
         logger.exception("unhandled_exception %s %s", request.method, request.url.path)
         return JSONResponse(_error_payload(500, "Internal Server Error", request), status_code=500)
 
-    # Routers
-    from .routers import ai_photos, backup, recommendations  # noqa: E402
+    # Routers without prefix
+    from .routers import root  # noqa: E402
+    app.include_router(root.router)
+
+    # Routers with /api/v1 prefix
     from .routers.analytics import router as analytics_router  # noqa: E402
     from .routers.auth import router as auth_router  # noqa: E402
     from .routers.orders import router as orders_router  # noqa: E402
@@ -115,24 +122,35 @@ def create_app() -> FastAPI:
     from .routers.stores import router as stores_router  # noqa: E402
     from .routers.content import router as content_router  # noqa: E402
     from .routers.uploads import router as uploads_router  # noqa: E402
+    from .routers.seo import router as seo_router  # noqa: E402
+    from .routers.metrics import router as metrics_router  # noqa: E402
+    from .routers import ai_photos, backup, recommendations  # noqa: E402
     from .routers.liqpay import router as liqpay_router  # noqa: E402
 
     app.include_router(auth_router)
-    app.include_router(products_router, prefix="/api/v1")
-    app.include_router(categories_router, prefix="/api/v1")
-    app.include_router(variants_router, prefix="/api/v1")
-    app.include_router(users_router, prefix="/api/v1")
-    app.include_router(stores_router, prefix="/api/v1")
-    app.include_router(content_router, prefix="/api/v1")
-    app.include_router(orders_router, prefix="/api/v1")
-    app.include_router(analytics_router, prefix="/api/v1")
-    app.include_router(utility_router, prefix="/api/v1")
-    app.include_router(uploads_router, prefix="/api/v1")
+    app.include_router(products_router, prefix="/api/v1", tags=["products"])
+    app.include_router(categories_router, prefix="/api/v1", tags=["categories"])
+    app.include_router(variants_router, prefix="/api/v1", tags=["variants"])
+    app.include_router(users_router, prefix="/api/v1", tags=["users"])
+    app.include_router(stores_router, prefix="/api/v1", tags=["stores"])
+    app.include_router(content_router, prefix="/api/v1", tags=["content"])
+    app.include_router(orders_router, prefix="/api/v1", tags=["orders"])
+    app.include_router(analytics_router, prefix="/api/v1", tags=["analytics"])
+    app.include_router(utility_router, prefix="/api/v1", tags=["utility"])
+    app.include_router(uploads_router, prefix="/api/v1", tags=["uploads"])
     app.include_router(liqpay_router)
-    app.include_router(product_images_router)
-    app.include_router(ai_photos.router, prefix="/api")
-    app.include_router(backup.router, prefix="/api")
-    app.include_router(recommendations.router)
+    app.include_router(product_images_router, prefix="/api/v1")
+    app.include_router(ai_photos.router, prefix="/api", tags=["ai_photos"])
+    app.include_router(backup.router, prefix="/api", tags=["backup"])
+    app.include_router(recommendations.router, prefix="/api/v1", tags=["recommendations"])
+    app.include_router(seo_router, tags=["seo"])
+    app.include_router(metrics_router, tags=["metrics"])
+
+# Also register key routes at root level for frontend proxy compatibility
+    app.include_router(content_router, prefix="")
+    app.include_router(categories_router, prefix="")
+    app.include_router(stores_router, prefix="")
+    app.include_router(uploads_router, prefix="")
 
     return app
 

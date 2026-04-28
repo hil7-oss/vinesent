@@ -93,6 +93,9 @@ function resolveImg(src: any, fallback: string): string {
   let s = String(src).trim()
   if (!s || s === 'null' || s === 'undefined') return fallback
 
+  // Ensure we have a string before calling startsWith
+  if (typeof s !== 'string') return fallback
+
   if (s.startsWith('http')) return s
   if (s.startsWith('/uploads/')) return s
   if (s.startsWith('uploads/')) return `/${s}`
@@ -257,7 +260,7 @@ export default async function Home() {
                       fill
                       sizes="(max-width: 1024px) 50vw, 25vw"
                       className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                      unoptimized={img.startsWith('/uploads/')}
+                      unoptimized={typeof img === 'string' && img.startsWith('/uploads/')}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-black/0 opacity-90 transition-opacity duration-300" />
                     <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">

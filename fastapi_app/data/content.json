@@ -1,11 +1,11 @@
 {
   "banners": [
     {
-      "id": "hero-1776699177486",
-      "title": "WTF",
-      "subtitle": "HHHTTF",
-      "image": "https://res.cloudinary.com/dkgds398y/image/upload/v1776699194/vinesent/products/1776699193_df23fd9b.webp",
-      "link": "/new",
+      "id": "banner-1777407390012",
+      "title": "TITLE",
+      "subtitle": "",
+      "image": "https://res.cloudinary.com/dkgds398y/image/upload/v1777407399/vinesent/products/1777407398_ee9b296f.webp",
+      "link": "/menu",
       "position": "hero",
       "active": true,
       "text": null,
@@ -20,36 +20,17 @@
       "showAnimation": null
     },
     {
-      "id": "promo1-1776700919041",
-      "title": "ОБИРАЮТЬ ІДЕАЛЬНЕ",
-      "subtitle": "Преміальна якість для вашої дитини",
-      "image": "https://kolesa-uploads.ru/r/880x/47b05797-6023-4124-a98e-fa29f0a49974/bmw-m5-rest-front2.jpg",
+      "id": "banner-1777407414430",
+      "title": "TITLE",
+      "subtitle": "",
+      "image": "",
       "link": "/menu",
       "position": "promo1",
       "active": true,
       "text": null,
-      "bgColor": "#111111",
-      "textColor": "#ffffff",
-      "buttonText": "Переглянути",
-      "buttonLink": null,
-      "buttonBgColor": null,
-      "buttonTextColor": null,
-      "showTimer": null,
-      "timerEndsAt": null,
-      "showAnimation": null
-    },
-    {
-      "id": "promo2-1776700919041",
-      "title": "КОЛЕКЦІЇ",
-      "subtitle": "Зібрані образи спеціально для вас",
-      "image": "https://kolesa-uploads.ru/r/880x/47b05797-6023-4124-a98e-fa29f0a49974/bmw-m5-rest-front2.jpg",
-      "link": "/menu",
-      "position": "promo2",
-      "active": true,
-      "text": null,
-      "bgColor": "#f5f5f5",
-      "textColor": "#111111",
-      "buttonText": "Переглянути",
+      "bgColor": null,
+      "textColor": null,
+      "buttonText": null,
       "buttonLink": null,
       "buttonBgColor": null,
       "buttonTextColor": null,
@@ -60,38 +41,21 @@
   ],
   "promoBanners": [
     {
-      "id": "9dbb0334-dfd7-4a45-a542-2dc07ca18123",
-      "text": "При замовленнi бiльше 3000грн доставка БЕЗКОШТОВНА",
-      "bgColor": "#000000",
-      "textColor": "#ffffff",
+      "id": "c5f4056a-69cb-4e98-9072-2b0bac2881d1",
+      "text": "Новий текст",
+      "bgColor": null,
+      "textColor": null,
       "buttonText": null,
       "buttonLink": null,
       "buttonBgColor": null,
       "buttonTextColor": null,
-      "showTimer": false,
+      "showTimer": null,
       "timerEndsAt": null,
-      "showAnimation": true,
+      "showAnimation": null,
       "active": true
     }
   ],
-  "collections": [
-    {
-      "id": "0094f8c8-0222-4591-9322-c416e6fd70cc",
-      "key": "FASHION",
-      "title": "NOPE MODELS",
-      "description": "",
-      "productIds": [
-        "e4c84d97-2143-4dae-af6f-f003f33371e1",
-        "f2bca12a-eba8-40ae-9cb4-ad50088923c2",
-        "3d487c6a-b341-465f-af25-7775cc210ae1",
-        "53777e57-1650-4ba5-86ac-f63847eddf07",
-        "f18d9a26-926f-4463-b6a2-f797cd91396e",
-        "1926b4bc-47f3-41ae-88fb-23ff22738910",
-        "efd8fd4b-aa81-4b4c-b90b-08f6d720afc7",
-        "f01f33de-2ac8-4b95-956c-7f05cbf47ea1"
-      ]
-    }
-  ],
+  "collections": [],
   "navigation": [],
-  "updatedAt": "2026-04-20T16:05:40.440333"
+  "updatedAt": "2026-04-28T20:19:45.869316"
 }

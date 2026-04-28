@@ -9,8 +9,11 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from ..config import CONTENT_PATH, LEGACY_CONTENT_PATH
+from ..database import get_db
 from ..dependencies import require_admin
 from ..core.storage import read_json, write_json
 from ..schemas import ContentData, Banner, BannerUpdate, CollectionUpdate
@@ -282,3 +285,113 @@ def delete_collection(key: str, user: dict = Depends(require_admin)):
         if str(c.get("key") or "").strip().upper() != target
     ]
     return _write_content(data)
+
+
+# ── GET /content/home ────────────────────────────────────────────────────────────
+
+@router.get("/content/home")
+def get_content_home(db: Session = Depends(get_db)):
+    """Get home page content: banners, promo-banners, collections, and products."""
+    from datetime import datetime, timedelta
+    
+    data = _read_content()
+    collections = [dict(c) for c in (data.get("collections", []) or [])]
+    
+    # Get all products
+    all_rows = db.execute(
+        text('SELECT id, name, slug, description, price, "salePrice", images, stock, "categoryId", "createdAt" FROM "Product" ORDER BY "createdAt" DESC')
+    ).mappings().all()
+    all_by_id = {str(r["id"]): dict(r) for r in all_rows}
+    
+    # Get product-category links
+    links = db.execute(text('SELECT "A", "B" FROM "_ProductCategories"')).fetchall()
+    products_by_category: dict[str, set[str]] = {}
+    for cid, pid in links:
+        if cid and pid:
+            products_by_category.setdefault(str(cid), set()).add(str(pid))
+    
+    # Legacy category links
+    legacy = db.execute(text('SELECT id, "categoryId" FROM "Product" WHERE "categoryId" IS NOT NULL AND "categoryId" <> \'\'')).fetchall()
+    for pid, cid in legacy:
+        if cid and pid:
+            products_by_category.setdefault(str(cid), set()).add(str(pid))
+    
+    # Get categories
+    cat_rows = db.execute(text('SELECT id, name, slug, "parentId" FROM "Category"')).mappings().all()
+    categories_by_key: dict[str, list[str]] = {}
+    children_by_parent: dict[str, list[str]] = {}
+    for c in cat_rows:
+        cid = str(c.get("id") or "")
+        if not cid:
+            continue
+        slug = str(c.get("slug") or "").strip().lower()
+        name = str(c.get("name") or "").strip().lower()
+        parent_id = str(c.get("parentId") or "")
+        if parent_id:
+            children_by_parent.setdefault(parent_id, []).append(cid)
+        if slug:
+            categories_by_key.setdefault(slug, []).append(cid)
+        if name:
+            categories_by_key.setdefault(name, []).append(cid)
+    
+    # Resolve products for each collection
+    product_ids: list[str] = []
+    for c in collections:
+        key = str(c.get("key") or "").strip().upper()
+        explicit = [str(x).strip() for x in (c.get("productIds") or []) if str(x).strip()]
+        resolved = list(dict.fromkeys(explicit))
+        
+        if not resolved:
+            if key == "NEW":
+                # Latest 16 products
+                resolved = [str(r["id"]) for r in all_rows[:16]]
+            elif key == "SALE":
+                # Products with sale price
+                resolved = [str(r["id"]) for r in all_rows if r.get("salePrice") not in (None, "", 0, 0.0)]
+            else:
+                # Resolve by category
+                k = key.lower()
+                match_ids = categories_by_key.get(k, [])
+                hits: set[str] = set()
+                for root_cid in match_ids:
+                    stack = [root_cid]
+                    seen_cats: set[str] = set()
+                    while stack:
+                        cur = stack.pop()
+                        if cur in seen_cats:
+                            continue
+                        seen_cats.add(cur)
+                        hits |= products_by_category.get(cur, set())
+                        stack.extend(children_by_parent.get(cur, []))
+                resolved = list(hits)
+        
+        c["productIds"] = resolved
+        product_ids.extend(resolved)
+    
+    product_ids = list(dict.fromkeys(product_ids))
+    
+    # Build products list
+    products = []
+    for pid in product_ids:
+        row = all_by_id.get(str(pid))
+        if not row:
+            continue
+        products.append({
+            "id": row["id"],
+            "name": row.get("name"),
+            "slug": row.get("slug"),
+            "description": row.get("description"),
+            "price": row.get("price"),
+            "images": row.get("images"),
+            "stock": row.get("stock"),
+            "categoryId": row.get("categoryId"),
+        })
+    
+    return {
+        "banners": data.get("banners", []),
+        "promoBanners": data.get("promoBanners", []),
+        "collections": collections,
+        "navigation": data.get("navigation", []),
+        "products": products,
+        "updatedAt": data.get("updatedAt"),
+    }

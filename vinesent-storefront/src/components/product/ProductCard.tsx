@@ -19,7 +19,7 @@ export default function ProductCard({ product, badges }: { product: Product; sho
   const [fav, setFav] = useState(false)
   const rawImg = getFirstImage(product.images)
   const img = useMemo(() => {
-    if (!rawImg) return ''
+    if (!rawImg || typeof rawImg !== 'string') return ''
     if (rawImg.startsWith('http')) {
       // Cloudinary optimization
       if (rawImg.includes('res.cloudinary.com') && rawImg.includes('/upload/')) {
@@ -37,7 +37,7 @@ export default function ProductCard({ product, badges }: { product: Product; sho
       return img.replace('/upload/', '/upload/f_auto,q_30,w_480,c_limit/')
     }
     // Local uploads: use backend-generated LQIP path
-    if (img.startsWith('/uploads/')) {
+    if (typeof img === 'string' && img.startsWith('/uploads/')) {
       const parts = img.split('/uploads/')
       return `/uploads/_lqip/${parts[1]}`
     }
