@@ -6,8 +6,6 @@ from sqlalchemy import text
 
 from ..database import get_db
 from ..dependencies import require_admin
-from ..schemas import CategoryCreate, CategoryOut, CategoryUpdate
-from ..services.cloudinary_service import upload_to_cloudinary
 
 router = APIRouter(prefix="", tags=["utility"])
 
@@ -78,7 +76,9 @@ async def upload_file(file: UploadFile = File(...), user: dict = Depends(require
     cloudinary_url = None
     cloudinary_public_id = None
 
+    # Try cloudinary but continue on error
     try:
+        from ..services.cloudinary_service import upload_to_cloudinary
         cloudinary_url, cloudinary_public_id = upload_to_cloudinary(save_path, public_id=f"vinesent/{file_id}")
     except Exception:
         pass
