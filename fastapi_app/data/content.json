@@ -1,61 +1,7 @@
 {
-  "banners": [
-    {
-      "id": "banner-1777407390012",
-      "title": "TITLE",
-      "subtitle": "",
-      "image": "https://res.cloudinary.com/dkgds398y/image/upload/v1777407399/vinesent/products/1777407398_ee9b296f.webp",
-      "link": "/menu",
-      "position": "hero",
-      "active": true,
-      "text": null,
-      "bgColor": null,
-      "textColor": null,
-      "buttonText": null,
-      "buttonLink": null,
-      "buttonBgColor": null,
-      "buttonTextColor": null,
-      "showTimer": null,
-      "timerEndsAt": null,
-      "showAnimation": null
-    },
-    {
-      "id": "banner-1777407414430",
-      "title": "TITLE",
-      "subtitle": "",
-      "image": "",
-      "link": "/menu",
-      "position": "promo1",
-      "active": true,
-      "text": null,
-      "bgColor": null,
-      "textColor": null,
-      "buttonText": null,
-      "buttonLink": null,
-      "buttonBgColor": null,
-      "buttonTextColor": null,
-      "showTimer": null,
-      "timerEndsAt": null,
-      "showAnimation": null
-    }
-  ],
-  "promoBanners": [
-    {
-      "id": "c5f4056a-69cb-4e98-9072-2b0bac2881d1",
-      "text": "Новий текст",
-      "bgColor": null,
-      "textColor": null,
-      "buttonText": null,
-      "buttonLink": null,
-      "buttonBgColor": null,
-      "buttonTextColor": null,
-      "showTimer": null,
-      "timerEndsAt": null,
-      "showAnimation": null,
-      "active": true
-    }
-  ],
+  "banners": [],
+  "promoBanners": [],
   "collections": [],
   "navigation": [],
-  "updatedAt": "2026-04-28T20:19:45.869316"
+  "updatedAt": "2026-05-01T19:39:22.415506"
 }

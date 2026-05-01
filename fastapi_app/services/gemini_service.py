@@ -92,6 +92,18 @@ def rgb_to_hex(rgb: tuple) -> str:
 
 def _generate_image(client: genai.Client, model: str, image_path: str, prompt: str) -> bytes:
     raw_input_img = Image.open(image_path)
+    
+    # Convert PNG to JPEG if needed - some models don't support PNG alpha
+    if raw_input_img.mode in ('RGBA', 'P', 'LA'):
+        raw_input_img = raw_input_img.convert('RGB')
+    
+    # Convert PIL Image to bytes for reliable SDK transmission
+    import io
+    img_buffer = io.BytesIO()
+    raw_input_img.save(img_buffer, format='JPEG', quality=95)
+    img_buffer.seek(0)
+    img_bytes = img_buffer.read()
+    
     cfg_kwargs = {"response_modalities": ["IMAGE"]}
     seed_env = os.getenv("GEMINI_RANDOM_SEED")
     if seed_env:
@@ -122,7 +134,15 @@ def _generate_image(client: genai.Client, model: str, image_path: str, prompt: s
         config = types.GenerateContentConfig(**cfg_kwargs)
     except TypeError:
         config = types.GenerateContentConfig(response_modalities=["IMAGE"])
-    resp = client.models.generate_content(model=model, contents=[prompt, raw_input_img], config=config)
+    
+    # Pass image as inline_data Part for reliable SDK v1.x compatibility
+    image_part = types.Part(
+        inline_data=types.Blob(
+            mime_type="image/jpeg",
+            data=img_bytes,
+        )
+    )
+    resp = client.models.generate_content(model=model, contents=[prompt, image_part], config=config)
     parts = getattr(resp.candidates[0].content, "parts", []) if resp.candidates else []
     for part in parts:
         data = getattr(part, "inline_data", None)

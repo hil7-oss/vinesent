@@ -142,13 +142,15 @@ def create_app() -> FastAPI:
     app.include_router(product_images_router, prefix="/api/v1")
     app.include_router(ai_photos.router, prefix="/api", tags=["ai_photos"])
     app.include_router(backup.router, prefix="/api", tags=["backup"])
-    app.include_router(recommendations.router, prefix="/api/v1", tags=["recommendations"])
+    app.include_router(recommendations.router, tags=["recommendations"])
     app.include_router(seo_router, tags=["seo"])
     app.include_router(metrics_router, tags=["metrics"])
 
 # Also register key routes at root level for frontend proxy compatibility
     app.include_router(content_router, prefix="")
     app.include_router(categories_router, prefix="")
+    app.include_router(products_router, prefix="")
+    app.include_router(variants_router, prefix="")
     app.include_router(stores_router, prefix="")
     app.include_router(uploads_router, prefix="")
 

@@ -300,7 +300,10 @@ export default async function Home() {
                   if (firstProd && firstProd.images) {
                     try {
                       const imgs = JSON.parse(firstProd.images);
-                      if (Array.isArray(imgs) && imgs.length > 0) src = imgs[0];
+                      if (Array.isArray(imgs) && imgs.length > 0) {
+                        const first = imgs[0];
+                        src = typeof first === 'string' ? first : first?.url || '';
+                      }
                     } catch {
                       if (typeof firstProd.images === 'string') src = firstProd.images;
                     }

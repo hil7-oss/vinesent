@@ -503,7 +503,7 @@ export default function AdminContentPage() {
   const updCollection = async (key: string, data: any) => {
     setSaving(true)
     try {
-      await fetch(`${API_BASE}/api/v1/content/collections/${key}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+      await fetch(`${API_BASE}/api/v1/content/collections/${key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
       await fetchData()
     } finally { setSaving(false) }
   }

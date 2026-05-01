@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFi
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from .run_generate_4_photos import build_prompts
+from .run_generate_photos import build_prompts, build_prompts_for_product, _detect_block_type
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -404,11 +404,26 @@ def generate_photo(req: GenerateRequest):
 
         rgb_str = hex_to_rgb_str(req.color_hex or "#000000")
         
-        # Generate prompt based on image type
+        # Get product category for smart prompt generation
+        prod_category = "clothing"
+        with db_session() as db:
+            prow = db.execute(
+                text('SELECT "categoryId" FROM "Product" WHERE id = :id'),
+                {"id": req.product_id},
+            ).mappings().first()
+            if prow and prow.get("categoryId"):
+                crow = db.execute(
+                    text('SELECT name, slug FROM "Category" WHERE id = :id'),
+                    {"id": prow.get("categoryId")},
+                ).mappings().first()
+                if crow:
+                    prod_category = str(crow.get("name") or crow.get("slug") or "clothing").strip()
+        
+        # Generate prompt based on image type and category
         if template_text:
             prompt = render_prompt(
                 template_text,
-                category="clothing",
+                category=prod_category,
                 gender=req.gender,
                 color_name=req.color_name or "colorful",
                 color_hex=req.color_hex or "#000000",
@@ -416,22 +431,16 @@ def generate_photo(req: GenerateRequest):
                 image_type=req.image_type,
             )
         else:
-            # Use default template with image type support
-            from ..services.prompt_service import get_default_template
-            default_template = get_default_template(
-                category="clothing",
+            # Use new category-aware prompt builder
+            prompts_data = build_prompts_for_product(
+                category=prod_category,
                 gender=req.gender,
-                image_type=req.image_type
-            )
-            prompt = render_prompt(
-                default_template,
-                category="clothing",
-                gender=req.gender,
-                color_name=req.color_name or "colorful",
                 color_hex=req.color_hex or "#000000",
-                rgb_str=rgb_str,
+                color_name=req.color_name or "colorful",
                 image_type=req.image_type,
+                count=1,
             )
+            prompt = prompts_data[0]["prompt"] if prompts_data else ""
 
         logger.info(
             "Generating %s image for product %s",
@@ -595,9 +604,16 @@ async def try_on_photo(
         if prompt:
             eff_prompt = prompt
         else:
-            idx = _default_prompt_index()
-            options = build_prompts(rgb_str)
-            eff_prompt = options[idx] if 0 <= idx < len(options) else options[0]
+            # Use new category-aware prompt builder
+            prompts_data = build_prompts_for_product(
+                category=eff_category,
+                gender=gender or "unisex",
+                color_hex=rgb,
+                color_name=rgb_str,
+                image_type="front",  # Single photo for tryon
+                count=1,
+            )
+            eff_prompt = prompts_data[0]["prompt"] if prompts_data else build_prompts(rgb_str)[0]
 
         with db_session() as db:
             upsert_prompt_template(db, eff_category, gender or "unisex", eff_prompt)
@@ -660,9 +676,35 @@ async def generate_multiple_photos(
             owns_temp = image_url.startswith("http")
 
         rgb_str = hex_to_rgb_str(colorHex)
-        prompts = build_prompts(rgb_str)
         
-        # Якщо є друге фото - додаємо промпти для нього
+        # Get category name from product for smart prompt generation
+        prod_category = None
+        prod_name = None
+        with db_session() as db:
+            prow = db.execute(
+                text('SELECT "categoryId" FROM "Product" WHERE id = :id'),
+                {"id": productId},
+            ).mappings().first()
+            if prow and prow.get("categoryId"):
+                crow = db.execute(
+                    text('SELECT name, slug FROM "Category" WHERE id = :id'),
+                    {"id": prow.get("categoryId")},
+                ).mappings().first()
+                if crow:
+                    prod_category = str(crow.get("name") or crow.get("slug") or category).strip()
+        
+        # Use new category-aware prompt builder
+        prompts_data = build_prompts_for_product(
+            category=prod_category or category or "clothing",
+            gender=gender,
+            color_hex=colorHex,
+            color_name=colorHex,
+            image_type="all",
+            count=8,  # Maximum 8 photos
+        )
+        prompts = [p["prompt"] for p in prompts_data]
+        
+        # Back path handling - if back image provided, use it for back view prompts
         back_path = None
         owns_back_path = False
         if fileBack:
@@ -671,8 +713,16 @@ async def generate_multiple_photos(
             with os.fdopen(fd, "wb") as f:
                 f.write(await fileBack.read())
             owns_back_path = True
-            # Додаємо 2 промпти для задньої частини
-            back_prompts = build_prompts(rgb_str)[:2]  # Тільки 2 варіанти
+            # Generate back view prompts using the new system
+            back_prompts_data = build_prompts_for_product(
+                category=prod_category or category or "clothing",
+                gender=gender,
+                color_hex=colorHex,
+                color_name=colorHex,
+                image_type="back",
+                count=2,
+            )
+            back_prompts = [p["prompt"] for p in back_prompts_data]
             prompts = prompts + back_prompts
         
         measurements = None
@@ -752,15 +802,19 @@ def _process_multiple_job(
     done = 0
     failed = 0
     try:
-        # Перші 4 промпти - для основного фото
-        front_prompts_count = 4 if not back_path else len(prompts) - 2
+        # New prompt system includes back view in the main list
+        # Use base_path for front/side/detail views, back_path for back view if available
+        back_view_keywords = ["back view", "back of", "facing away", "from behind", "back_full"]
         
         for i, prompt in enumerate(prompts):
             if i > 0:
                 _SLEEP_EVENT.wait(BATCH_ITEM_DELAY_S)
             try:
-                # Вибираємо правильне фото: перші 4 - основне, решта - заднє
-                current_path = base_path if i < front_prompts_count else (back_path or base_path)
+                # Choose image source: use back_path for back view prompts if available
+                prompt_lower = prompt.lower()
+                is_back_view = any(kw in prompt_lower for kw in back_view_keywords)
+                current_path = (back_path or base_path) if (is_back_view and back_path) else base_path
+                
                 img_bytes = generate_image(current_path, prompt)
                 up = upload_result_image(img_bytes)
                 with db_session() as db:
