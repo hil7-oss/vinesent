@@ -101,6 +101,7 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
   const [aiMessage, setAiMessage] = useState('')
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [aiGender, setAiGender] = useState<'male' | 'female' | 'unisex'>('male')
+  const [aiAccent, setAiAccent] = useState('auto')
   const [aiGenerateOnSave, setAiGenerateOnSave] = useState(false)
   const [aiAutoText, setAiAutoText] = useState('')
   const [aiAutoLoading, setAiAutoLoading] = useState(false)
@@ -180,7 +181,7 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
       setSetProductIds([])
     }
     setAiFile(null); setAiPreview(''); setAiFileBack(null); setAiPreviewBack(''); setAiHex('#000000'); setAiRgb(null); setAiMessage('')
-    setAiGenerateOnSave(false); setAiAutoText(''); setAiAutoLoading(false); setAiAutoError('')
+    setAiGenerateOnSave(false); setAiAutoText(''); setAiAutoLoading(false); setAiAutoError(''); setAiAccent('auto')
     try {
       const w = window as any
       setVoiceSupported(!!(w.SpeechRecognition || w.webkitSpeechRecognition))
@@ -349,7 +350,7 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
         const fd = new FormData()
         if (aiFile) fd.append('file', aiFile)
         if (aiFileBack) fd.append('fileBack', aiFileBack)
-        fd.append('category', categoryKey || 'clothing'); fd.append('colorHex', aiHex); fd.append('gender', aiGender); fd.append('productId', saved.id)
+        fd.append('category', categoryKey || 'clothing'); fd.append('colorHex', aiHex); fd.append('gender', aiGender); fd.append('accent', aiAccent); fd.append('productId', saved.id)
         try {
           const aiRes = await fetch(`${API_BASE}/api/admin/ai-photos/generate-multiple`, { method: 'POST', body: fd })
           if (aiRes.ok) {
@@ -582,6 +583,23 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
                       </div>
                     </Field>
                     {categoryKey && <div className="text-[11px] text-gray-400">Категорія: <span className="font-medium text-gray-600">{categoryKey}</span></div>}
+                    <Field label="Акцент фото" hint="Що фокусувати при генерації">
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {[
+                          { value: 'auto', label: 'Авто', desc: 'За категорією' },
+                          { value: 'top', label: 'Верх', desc: 'Футболки, куртки' },
+                          { value: 'bottom', label: 'Низ', desc: 'Штани, джинси' },
+                          { value: 'accessory', label: 'Аксесуар', desc: 'Шапки, сумки' },
+                          { value: 'set', label: 'Сет', desc: 'Повний образ' },
+                        ].map(t => (
+                          <button key={t.value} type="button" onClick={() => setAiAccent(t.value)}
+                            className={`flex flex-col items-start h-auto px-3 py-2 rounded-xl text-[11px] font-medium transition ${aiAccent === t.value ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                            <span>{t.label}</span>
+                            <span className={`text-[9px] ${aiAccent === t.value ? 'text-gray-300' : 'text-gray-400'}`}>{t.desc}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={aiGenerateOnSave} onChange={e => setAiGenerateOnSave(e.target.checked)} className="accent-gray-900 w-3.5 h-3.5" />
                       <span className="text-[12px] text-gray-600">Генерувати після збереження</span>

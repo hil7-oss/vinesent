@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFi
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from .run_generate_photos import build_prompts, build_prompts_for_product, _detect_block_type
+from .run_generate_photos import build_prompts, build_prompts_for_product
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -645,8 +645,9 @@ async def generate_multiple_photos(
     category: str = Form(...),
     gender: str = Form("male"),
     colorHex: str = Form("#000000"),
+    accent: str = Form("auto"),
     file: Optional[UploadFile] = File(None),
-    fileBack: Optional[UploadFile] = File(None),  # Друге фото для спини
+    fileBack: Optional[UploadFile] = File(None),
     background_tasks: BackgroundTasks = None,
 ):
     owns_temp = False
@@ -693,18 +694,21 @@ async def generate_multiple_photos(
                 if crow:
                     prod_category = str(crow.get("name") or crow.get("slug") or category).strip()
         
-        # Use new category-aware prompt builder
+        # Resolve accent: auto → detect from category, otherwise use explicit accent
+        resolved_accent = accent if accent in ("top", "bottom", "accessory", "set") else ""
+        
+        # Build prompts using the new accent-based system
         prompts_data = build_prompts_for_product(
             category=prod_category or category or "clothing",
             gender=gender,
             color_hex=colorHex,
             color_name=colorHex,
-            image_type="all",
-            count=8,  # Maximum 8 photos
+            image_type=resolved_accent,  # passes "top"/"bottom"/"accessory"/set" or empty for auto-detect
+            count=8,
         )
         prompts = [p["prompt"] for p in prompts_data]
         
-        # Back path handling - if back image provided, use it for back view prompts
+        # Back path handling
         back_path = None
         owns_back_path = False
         if fileBack:
@@ -713,17 +717,6 @@ async def generate_multiple_photos(
             with os.fdopen(fd, "wb") as f:
                 f.write(await fileBack.read())
             owns_back_path = True
-            # Generate back view prompts using the new system
-            back_prompts_data = build_prompts_for_product(
-                category=prod_category or category or "clothing",
-                gender=gender,
-                color_hex=colorHex,
-                color_name=colorHex,
-                image_type="back",
-                count=2,
-            )
-            back_prompts = [p["prompt"] for p in back_prompts_data]
-            prompts = prompts + back_prompts
         
         measurements = None
         try:
