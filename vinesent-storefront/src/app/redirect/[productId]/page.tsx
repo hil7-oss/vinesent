@@ -1,6 +1,8 @@
 import { api } from '@/lib/api'
 import { redirect } from 'next/navigation'
 
+export const dynamic = 'force-dynamic'
+
 async function getRedirectPath(productId: string): Promise<string | null> {
   try {
     const res = await fetch(api(`/products/${productId}`), { next: { revalidate: 300 } })

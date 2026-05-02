@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { fetchApi } from '@/lib/api'
 
-export const dynamic = 'force-static'
+export const dynamic = 'force-dynamic'
 
 export default function AccountPage() {
   const router = useRouter()

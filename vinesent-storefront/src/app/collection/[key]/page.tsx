@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import ProductCard from '@/components/product/ProductCard'
 
+export const dynamic = 'force-dynamic'
+
 async function getContent() {
   const res = await fetch(api('/content/home'), { next: { revalidate: 3600 } }).catch(() => null)
   return res?.ok ? await res.json() : []

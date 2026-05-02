@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Script from "next/script";
+import { Suspense } from "react";
 
 const inter = Inter({
   variable: "--font-body",
@@ -136,7 +137,7 @@ export default function RootLayout({
             />
           </noscript>
         )}
-        <Header />
+        <Suspense><Header /></Suspense>
         <main className="min-h-screen overflow-x-hidden">{children}</main>
         <Footer />
       </body>

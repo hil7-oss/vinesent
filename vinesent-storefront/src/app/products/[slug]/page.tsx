@@ -3,6 +3,8 @@ import { api } from '@/lib/api'
 import { getFirstImage, getAllImages } from '@/lib/utils'
 import ProductClientPage from './ProductClient'
 
+export const dynamic = 'force-dynamic'
+
 export const revalidate = 300
 
 // ─── Server-side product fetch ────────────────────────────────────────────────
@@ -150,7 +152,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
-      <ProductClientPage product={product} allProducts={allProducts || []} />
+      <ProductClientPage params={params} product={product} allProducts={allProducts || []} />
     </>
   )
 }

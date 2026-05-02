@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { formatPrice, getFirstImage } from '@/lib/utils'
 import { API_BASE } from '@/lib/api'
 
-export const dynamic = 'force-static'
+export const dynamic = 'force-dynamic'
 
 type CartItem = {
   id: string

@@ -6,6 +6,8 @@ import { AnimatedSection } from "@/components/ui/AnimatedSection"
 import { PromoBanner } from "@/components/ui/PromoBanner"
 import { api } from "@/lib/api"
 
+export const dynamic = 'force-dynamic'
+
 async function getCategories() {
   const res = await fetch(api('/categories'), { next: { revalidate: 3600 } }).catch(() => null)
   return res?.ok ? await res.json() : []
@@ -110,7 +112,11 @@ export default async function Home() {
   ])
 
   const autoNew = (allProducts || []).filter((p: any) => p.isNew || p.new)
-  const autoSale = (allProducts || []).filter((p: any) => p.salePrice || p.onSale || p.sale)
+  const autoSale = (allProducts || []).filter((p: any) => p.salePrice != null && p.salePrice > 0 && p.salePrice < p.price)
+
+  // Fallback: if no products have isNew/salePrice flags, show all products
+  const newFallback = autoNew.length === 0 ? (allProducts || []) : autoNew
+  const saleFallback = autoSale.length === 0 ? (allProducts || []) : autoSale
 
   const girlCat = categories.find((c: any) => c.slug === 'girl') || null
   const boyCat = categories.find((c: any) => c.slug === 'boy') || null
@@ -161,12 +167,12 @@ export default async function Home() {
 
   const pinnedNew = getCollectionProducts('NEW')
   const pinnedNewIds = new Set(pinnedNew.map((p: any) => String(p?.id || '')))
-  const extraNew = (Array.isArray(autoNew) ? autoNew : []).filter((p: any) => !pinnedNewIds.has(String(p?.id || '')))
+  const extraNew = (Array.isArray(newFallback) ? newFallback : []).filter((p: any) => !pinnedNewIds.has(String(p?.id || '')))
   const newProducts = pinnedNew.concat(extraNew)
 
   const pinnedSale = getCollectionProducts('SALE')
   const pinnedSaleIds = new Set(pinnedSale.map((p: any) => String(p?.id || '')))
-  const extraSale = (Array.isArray(autoSale) ? autoSale : []).filter((p: any) => !pinnedSaleIds.has(String(p?.id || '')))
+  const extraSale = (Array.isArray(saleFallback) ? saleFallback : []).filter((p: any) => !pinnedSaleIds.has(String(p?.id || '')))
   const saleProducts = pinnedSale.concat(extraSale)
 
   const extraCollections = (content?.collections || []).filter(
@@ -278,6 +284,14 @@ export default async function Home() {
           <AnimatedSection delay={0.1} className="pb-10 lg:pb-16 pt-10">
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 lg:gap-4 px-2 lg:px-10">
               {otherCategories.slice(0, 12).map((cat: any) => {
+                // Build correct URL: subcategories use ?sub=, top-level use direct path
+                const href = cat.parentId
+                  ? (() => {
+                      const parent = sortedCategories.find((p: any) => p.id === cat.parentId)
+                      return parent ? `/category/${parent.slug}?sub=${cat.slug}` : `/category/${cat.slug}`
+                    })()
+                  : `/category/${cat.slug}`
+
                 // Multi-level image resolution
                 let src = cat.image;
                 
@@ -308,7 +322,7 @@ export default async function Home() {
                 const resolved = resolveImg(src, '/file.svg');
 
                 return (
-                <Link key={cat.id} href={`/category/${cat.slug}`} className="group relative aspect-square overflow-hidden rounded-2xl bg-gray-100">
+                <Link key={cat.id} href={href} className="group relative aspect-square overflow-hidden rounded-2xl bg-gray-100">
                   <Image
                     src={resolved}
                     alt={cat.name}

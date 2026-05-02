@@ -5,7 +5,7 @@ import { formatPrice } from '@/lib/utils'
 import { API_BASE } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 
-export const dynamic = 'force-static'
+export const dynamic = 'force-dynamic'
 
 type Step = 'data' | 'delivery' | 'payment' | 'success'
 

@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { formatPrice, getFirstImage } from '@/lib/utils'
 import { API_BASE } from '@/lib/api'
 
+export const dynamic = 'force-dynamic'
+
 export default function SearchPage() {
   const [q, setQ] = useState('')
   const [products, setProducts] = useState<any[]>([])

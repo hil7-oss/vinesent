@@ -4,6 +4,8 @@ import { formatPrice, getFirstImage, cn } from '@/lib/utils'
 import { api } from '@/lib/api'
 import ProductCard from '@/components/product/ProductCard'
 
+export const dynamic = 'force-dynamic'
+
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://vinesent.com').replace(/\/+$/, '')
 
 const FALLBACK_NAMES: Record<string, string> = {

@@ -21,9 +21,11 @@ export default function ProductCard({ product, badges }: { product: Product; sho
   const img = useMemo(() => {
     if (!rawImg || typeof rawImg !== 'string') return ''
     if (rawImg.startsWith('http')) {
-      // Cloudinary optimization
+      // Cloudinary optimization — only if not already applied
       if (rawImg.includes('res.cloudinary.com') && rawImg.includes('/upload/')) {
-        return rawImg.replace('/upload/', '/upload/f_auto,q_auto,w_800,c_limit/')
+        if (!rawImg.includes('/upload/f_auto')) {
+          return rawImg.replace('/upload/', '/upload/f_auto,q_auto,w_800,c_limit/')
+        }
       }
       return rawImg
     }
@@ -34,7 +36,10 @@ export default function ProductCard({ product, badges }: { product: Product; sho
     if (!img) return ''
     // If Cloudinary, request lightweight transformed preview
     if (img.includes('res.cloudinary.com') && img.includes('/upload/')) {
-      return img.replace('/upload/', '/upload/f_auto,q_30,w_480,c_limit/')
+      if (!img.includes('/upload/f_auto') && !img.includes('/upload/q_30')) {
+        return img.replace('/upload/', '/upload/f_auto,q_30,w_480,c_limit/')
+      }
+      return img
     }
     // Local uploads: use backend-generated LQIP path
     if (typeof img === 'string' && img.startsWith('/uploads/')) {
