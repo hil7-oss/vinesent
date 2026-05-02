@@ -17,7 +17,6 @@ async function proxy(req: NextRequest) {
   const headers = new Headers(req.headers)
   headers.delete('host')
   headers.set('host', 'api.vinesent.com')
-  headers.set('host', 'api.vinesent.com')
   headers.delete('connection')
   headers.delete('content-length')
   headers.delete('authorization')
@@ -32,10 +31,15 @@ async function proxy(req: NextRequest) {
     headers,
     body: hasBody ? await req.arrayBuffer() : undefined,
     redirect: 'manual',
+    cache: method === 'GET' ? 'force-cache' : undefined,
   })
 
   const resHeaders = new Headers(upstream.headers)
   resHeaders.delete('content-encoding')
+
+  if (method === 'GET' && upstream.ok) {
+    resHeaders.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300')
+  }
 
   return new NextResponse(upstream.body, {
     status: upstream.status,

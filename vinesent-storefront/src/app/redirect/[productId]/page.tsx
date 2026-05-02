@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 
 async function getRedirectPath(productId: string): Promise<string | null> {
   try {
-    const res = await fetch(api(`/products/${productId}`), { cache: 'no-store' })
+    const res = await fetch(api(`/products/${productId}`), { next: { revalidate: 300 } })
     if (!res.ok) return null
     const product = await res.json()
     if (!product?.slug) return null

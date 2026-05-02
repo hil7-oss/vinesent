@@ -3,12 +3,12 @@ import { api } from '@/lib/api'
 import { getFirstImage, getAllImages } from '@/lib/utils'
 import ProductClientPage from './ProductClient'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 // ─── Server-side product fetch ────────────────────────────────────────────────
 async function fetchProductBySlug(slug: string) {
   try {
-    const res = await fetch(api('/products'), { cache: 'no-store' })
+    const res = await fetch(api('/products'), { next: { revalidate: 300 } })
     if (!res.ok) return null
     const products = await res.json()
     if (!Array.isArray(products)) return null
@@ -90,7 +90,10 @@ export async function generateMetadata(
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function ProductPage({ params }: { params: { slug: string } }) {
-  const product = await fetchProductBySlug(params.slug)
+  const [product, allProducts] = await Promise.all([
+    fetchProductBySlug(params.slug),
+    fetchAllProducts(),
+  ])
   
   const siteUrl = (
     process.env.NEXT_PUBLIC_SITE_URL ||
@@ -147,7 +150,17 @@ export default async function ProductPage({ params }: { params: { slug: string }
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
-      <ProductClientPage params={params} />
+      <ProductClientPage product={product} allProducts={allProducts || []} />
     </>
   )
+}
+
+async function fetchAllProducts() {
+  try {
+    const res = await fetch(api('/products'), { next: { revalidate: 300 } })
+    if (!res.ok) return []
+    return await res.json()
+  } catch {
+    return []
+  }
 }

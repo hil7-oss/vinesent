@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { formatPrice, getFirstImage } from '@/lib/utils'
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-static'
 
 type FavItem = {
   id: string

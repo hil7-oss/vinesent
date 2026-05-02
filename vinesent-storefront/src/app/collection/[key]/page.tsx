@@ -3,7 +3,7 @@ import { api } from '@/lib/api'
 import ProductCard from '@/components/product/ProductCard'
 
 async function getContent() {
-  const res = await fetch(api('/content/home'), { cache: 'no-store' }).catch(() => null)
+  const res = await fetch(api('/content/home'), { next: { revalidate: 3600 } }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 

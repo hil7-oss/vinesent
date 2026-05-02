@@ -23,7 +23,7 @@ export async function generateMetadata(
   let catImage = ''
 
   try {
-    const res = await fetch(api('/categories'), { cache: 'no-store' })
+    const res = await fetch(api('/categories'), { next: { revalidate: 3600 } })
     if (res.ok) {
       const cats = await res.json()
       const cat = Array.isArray(cats) ? cats.find((c: any) => c.slug === params.slug) : null
@@ -70,8 +70,8 @@ async function getData(slug: string, params: { sort?: string; sale?: string; sub
   if (params.newest === '1') qs.set('new', 'true')
   if (params.sort) qs.set('sort', params.sort)
   const [categoriesRes, productsRes] = await Promise.all([
-    fetch(api('/categories'), { cache: 'no-store' }).catch(() => null),
-    fetch(api(`/products?${qs.toString()}`), { cache: 'no-store' }).catch(() => null),
+    fetch(api('/categories'), { next: { revalidate: 3600 } }).catch(() => null),
+    fetch(api(`/products?${qs.toString()}`), { next: { revalidate: 300 } }).catch(() => null),
   ])
   const categories = categoriesRes?.ok ? await categoriesRes.json() : []
   const products = productsRes?.ok ? await productsRes.json() : []

@@ -5,7 +5,7 @@ import { api } from '@/lib/api'
 import ProductCard from '@/components/product/ProductCard'
 
 async function getCategories() {
-  const res = await fetch(api('/categories'), { cache: 'no-store' }).catch(() => null)
+  const res = await fetch(api('/categories'), { next: { revalidate: 3600 } }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 
@@ -14,7 +14,7 @@ async function getProducts(sub?: string, sort?: string) {
   qs.set('sale', 'true')
   if (sub) qs.set('sub', sub)
   if (sort) qs.set('sort', sort)
-  const res = await fetch(api(`/products?${qs.toString()}`), { cache: 'no-store' }).catch(() => null)
+  const res = await fetch(api(`/products?${qs.toString()}`), { next: { revalidate: 300 } }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 

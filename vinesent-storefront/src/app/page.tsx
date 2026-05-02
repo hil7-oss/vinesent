@@ -7,23 +7,15 @@ import { PromoBanner } from "@/components/ui/PromoBanner"
 import { api } from "@/lib/api"
 
 async function getCategories() {
-  const res = await fetch(api('/categories'), { cache: 'no-store' }).catch(() => null)
+  const res = await fetch(api('/categories'), { next: { revalidate: 3600 } }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 async function getAllProducts() {
-  const res = await fetch(api('/products'), { cache: 'no-store' }).catch(() => null)
-  return res?.ok ? await res.json() : []
-}
-async function getNewProducts() {
-  const res = await fetch(api('/products?new=true'), { cache: 'no-store' }).catch(() => null)
-  return res?.ok ? await res.json() : []
-}
-async function getSaleProducts() {
-  const res = await fetch(api('/products?sale=true'), { cache: 'no-store' }).catch(() => null)
+  const res = await fetch(api('/products'), { next: { revalidate: 300 } }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 async function getContent() {
-  const res = await fetch(api('/content/home'), { cache: "no-store" }).catch(() => null)
+  const res = await fetch(api('/content/home'), { next: { revalidate: 3600 } }).catch(() => null)
   return res?.ok ? await res.json() : {}
 }
 
@@ -111,11 +103,14 @@ function resolveImg(src: any, fallback: string): string {
 
 // ── Main ──────────────────────────────────────
 export default async function Home() {
-  const categories = await getCategories()
-  const allProducts = await getAllProducts()
-  const autoNew = await getNewProducts()
-  const autoSale = await getSaleProducts()
-  const content = await getContent()
+  const [categories, allProducts, content] = await Promise.all([
+    getCategories(),
+    getAllProducts(),
+    getContent(),
+  ])
+
+  const autoNew = (allProducts || []).filter((p: any) => p.isNew || p.new)
+  const autoSale = (allProducts || []).filter((p: any) => p.salePrice || p.onSale || p.sale)
 
   const girlCat = categories.find((c: any) => c.slug === 'girl') || null
   const boyCat = categories.find((c: any) => c.slug === 'boy') || null

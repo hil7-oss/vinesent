@@ -3,8 +3,6 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { API_BASE } from '@/lib/api'
 
-export const dynamic = 'force-dynamic'
-
 export default function MenuPage() {
   const [categories, setCategories] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
