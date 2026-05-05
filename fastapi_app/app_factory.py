@@ -54,6 +54,10 @@ def create_app() -> FastAPI:
     from .services.content_service import seed_all  # noqa: E402
     seed_all()
 
+    # Seed prompts to data/prompts.json if not yet seeded (runs once, no-op after)
+    from .services.prompt_service import seed_prompts_if_empty  # noqa: E402
+    seed_prompts_if_empty()
+
     os.makedirs(UPLOADS_DIR, exist_ok=True)
     app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
@@ -106,26 +110,24 @@ def create_app() -> FastAPI:
         return JSONResponse(_error_payload(500, "Internal Server Error", request), status_code=500)
 
     # Routers without prefix
-    from .routers import root  # noqa: E402
-    app.include_router(root.router)
+    from .routers.system import root_router  # noqa: E402
+    app.include_router(root_router)
 
     # Routers with /api/v1 prefix
-    from .routers.analytics import router as analytics_router  # noqa: E402
-    from .routers.auth import router as auth_router  # noqa: E402
-    from .routers.orders import router as orders_router  # noqa: E402
-    from .routers.utility import router as utility_router  # noqa: E402
-    from .routers.product_images import router as product_images_router  # noqa: E402
-    from .routers.products import router as products_router  # noqa: E402
-    from .routers.categories import router as categories_router  # noqa: E402
-    from .routers.variants import router as variants_router  # noqa: E402
-    from .routers.users import router as users_router  # noqa: E402
-    from .routers.stores import router as stores_router  # noqa: E402
-    from .routers.content import router as content_router  # noqa: E402
-    from .routers.uploads import router as uploads_router  # noqa: E402
-    from .routers.seo import router as seo_router  # noqa: E402
-    from .routers.metrics import router as metrics_router  # noqa: E402
-    from .routers import ai_photos, backup, recommendations  # noqa: E402
-    from .routers.liqpay import router as liqpay_router  # noqa: E402
+    from .routers.ai import ai_photos_router, ai_tryon_router, prompts_router  # noqa: E402
+    from .routers.auth import auth_router, users_router  # noqa: E402
+    from .routers.catalog import categories_router, products_router, stores_router, variants_router  # noqa: E402
+    from .routers.content import content_router, seo_router  # noqa: E402
+    from .routers.orders import liqpay_router, orders_router  # noqa: E402
+    from .routers.system import (  # noqa: E402
+        analytics_router,
+        backup_router,
+        metrics_router,
+        product_images_router,
+        recommendations_router,
+        uploads_router,
+        utility_router,
+    )
 
     app.include_router(auth_router)
     app.include_router(products_router, prefix="/api/v1", tags=["products"])
@@ -140,13 +142,15 @@ def create_app() -> FastAPI:
     app.include_router(uploads_router, prefix="/api/v1", tags=["uploads"])
     app.include_router(liqpay_router)
     app.include_router(product_images_router, prefix="/api/v1")
-    app.include_router(ai_photos.router, prefix="/api", tags=["ai_photos"])
-    app.include_router(backup.router, prefix="/api", tags=["backup"])
-    app.include_router(recommendations.router, tags=["recommendations"])
+    app.include_router(ai_photos_router, prefix="/api", tags=["ai_photos"])
+    app.include_router(ai_tryon_router, prefix="/api", tags=["ai_tryon"])
+    app.include_router(backup_router, prefix="/api", tags=["backup"])
+    app.include_router(recommendations_router, tags=["recommendations"])
     app.include_router(seo_router, tags=["seo"])
     app.include_router(metrics_router, tags=["metrics"])
+    app.include_router(prompts_router, tags=["prompts"])
 
-# Also register key routes at root level for frontend proxy compatibility
+    # Also register key routes at root level for frontend proxy compatibility
     app.include_router(content_router, prefix="")
     app.include_router(categories_router, prefix="")
     app.include_router(products_router, prefix="")
