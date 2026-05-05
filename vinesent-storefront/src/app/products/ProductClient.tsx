@@ -40,7 +40,7 @@ export default function ProductClientPage({ params }: { params: { slug: string }
     }
   }, [product])
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Загрузка...</div>
+  if (loading) return <div className="flex items-center justify-center min-h-screen">Завантаження...</div>
   if (!product) return <div className="flex items-center justify-center min-h-screen">Товар не знайдено</div>
 
   const images = getAllImages(product.images)

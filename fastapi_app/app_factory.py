@@ -54,10 +54,6 @@ def create_app() -> FastAPI:
     from .services.content_service import seed_all  # noqa: E402
     seed_all()
 
-    # Seed prompts to data/prompts.json if not yet seeded (runs once, no-op after)
-    from .services.prompt_service import seed_prompts_if_empty  # noqa: E402
-    seed_prompts_if_empty()
-
     os.makedirs(UPLOADS_DIR, exist_ok=True)
     app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
