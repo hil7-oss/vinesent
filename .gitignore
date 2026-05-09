@@ -44,8 +44,8 @@ htmlcov/
 
 # Docker
 *.pid
+*.lock
 *.seed
-*.pid.lock
 
 # Temporary files
 *.tmp
@@ -54,7 +54,6 @@ htmlcov/
 
 # OS
 Thumbs.db
-.DS_Store
 
 # Database
 *.db
@@ -66,41 +65,25 @@ uploads/
 fastapi_app/uploads/*
 !fastapi_app/uploads/.gitkeep
 
-# Documentation (временные файлы)
-*.md.backup
-*.md.tmp
-
-# Secrets and credentials
-*.pem
-*.key
-*.crt
-*.p12
-*.pfx
-service-account*.json
-credentials*.json
-
-# Temporary reports and work files (Trash)
-ARCHITECTURE_FIXES.md
+# Temporary reports, audit files and personal notes (TRASH)
+ARCHITECTURE*.md
 CHECKLIST.md
 COMMANDS.md
-CONSTRUCTOR_COMPLETE.md
-CONSTRUCTOR_FIXES.md
-CONSTRUCTOR_STATUS.md
+CONSTRUCTOR_*.md
 FILES_CREATED.md
 FINAL_REPORT.md
-FIXES_APPLIED.md
-FIXES_APPLIED_FINAL.md
-FIXES_SUMMARY_UA.md
+FIXES_*.md
 FIX_PROMO_BANNER.md
 INDEX_FIXES.md
-QUICK_FIX_GUIDE.md
-QUICK_START_CONSTRUCTOR.md
+QUICK_*.md
 README_FIXES.md
 START_HERE.md
 SUMMARY.md
+backend_audit.md
+CLEANUP_GIT_HISTORY.md
 *.py_debug
 scratch/
-докс/
+докс
 bfg.jar
 *.bat
 *.sh
@@ -108,3 +91,14 @@ bfg.jar
 !apply_migrations_docker.bat
 !restart-local.sh
 !restart-local.bat
+
+# Development scripts
+test_*.py
+test_api.py
+create_admin_quick.py
+fix_routes.py
+apply_measurements_migration.py
+run_generate_4_photos.py
+validate_all.py
+check_*.py
+apply_order_migration.py
