@@ -5,7 +5,7 @@ import ProductCard from '@/components/product/ProductCard'
 export const dynamic = 'force-dynamic'
 
 async function getContent() {
-  const res = await fetch(api('/content/home'), { next: { revalidate: 3600 } }).catch(() => null)
+  const res = await fetch(api('/content/home'), { cache: 'no-store' }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 

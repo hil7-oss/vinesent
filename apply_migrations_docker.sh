@@ -2,7 +2,7 @@
 # Apply database migrations through Docker
 
 echo "=================================================="
-echo "Applying database migrations..."
+echo "Applying database migrations"
 echo "=================================================="
 
 # Check if Docker is running

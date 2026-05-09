@@ -5,7 +5,7 @@ import { formatPrice } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 
 type OrderItem = { productId: string; quantity: number; price: number; name?: string; slug?: string; image?: string | null; size?: string; color?: string }
 type Order = {
@@ -365,7 +365,7 @@ export default function AdminOrdersPage() {
   const [filterStatus, setFilterStatus] = useState<'ALL' | OrderStatus>('ALL')
 
   const fetchOrders = useCallback(async () => {
-    const res = await fetch(`${API_BASE}/api/v1/orders`)
+    const res = await fetch(`/orders`)
     const data = res.ok ? await res.json() : []
     setOrders(Array.isArray(data) ? data : [])
     setLoading(false)
@@ -378,7 +378,7 @@ export default function AdminOrdersPage() {
     setOrders(p => p.map(o => o.id === orderId ? { ...o, status: next } : o))
     setSelected(p => p?.id === orderId ? { ...p, status: next } : p)
     try {
-      const res = await fetch(`${API_BASE}/api/v1/orders/${orderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) })
+      const res = await fetch(`/orders/${orderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) })
       if (!res.ok) await fetchOrders()
     } catch { await fetchOrders() }
   }

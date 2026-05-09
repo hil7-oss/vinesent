@@ -37,10 +37,10 @@ export default function FilterPage() {
   ]
 
   const toggleSize = (s: string) => {
-    setSelectedSizes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+    setSelectedSizes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [prev, s])
   }
   const toggleColor = (c: string) => {
-    setSelectedColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
+    setSelectedColors(prev => prev.includes(c) ? prev.filter(x => x !== c) : [prev, c])
   }
 
   const apply = () => {

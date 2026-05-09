@@ -11,7 +11,7 @@ export default function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClo
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden' // Prevent background scrolling
-      fetch(`${API_BASE}/categories`)
+      fetch(`${API_BASE}/categories`, { cache: 'no-store' })
         .then(r => r.json())
         .then(setCategories)
         .catch(() => [])

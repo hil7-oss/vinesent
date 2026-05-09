@@ -31,12 +31,13 @@ def _hex_to_rgb_str(h: str) -> str:
 
 
 def _default_prompt(rgb_str: str) -> str:
-    """Возвращает базовый промпт для трайона если пользовательский не предоставлен."""
-    return (
-        f"Fashion photo of a person wearing the clothing item shown in the reference image. "
-        f"The garment color is {rgb_str}. "
-        "Professional studio lighting, white background, full body shot, high quality."
-    )
+    """Prompt for virtual try-on, loaded from admin-managed JSON."""
+    from fastapi_app.services import prompt_service
+    template = prompt_service.get_seo_prompt("virtual_try_on")
+    if template:
+        return prompt_service.render_prompt(template, rgb_str=rgb_str)
+    return ""
+    
 
 
 def _safe_remove(path: Optional[str]):
@@ -49,7 +50,7 @@ def _safe_remove(path: Optional[str]):
 
 @router.post("/ai/tryon")
 async def ai_tryon(
-    file: UploadFile = File(...),
+    file: UploadFile = File(),
     rgb: str = Form(default="#000000"),
     productId: str = Form(default=""),
     prompt: Optional[str] = Form(default=None),

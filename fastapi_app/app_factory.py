@@ -153,6 +153,7 @@ def create_app() -> FastAPI:
     app.include_router(variants_router, prefix="")
     app.include_router(stores_router, prefix="")
     app.include_router(uploads_router, prefix="")
+    app.include_router(users_router, prefix="")
+    app.include_router(orders_router, prefix="")
 
     return app
-

@@ -41,7 +41,7 @@ export default function OrderPage() {
           const sp = Number(p?.salePrice)
           const hasSale = !!p && Number.isFinite(sp) && sp > 0 && sp < basePrice
           const unitPrice = hasSale ? sp : (basePrice || Number(i.price) || 0)
-          return { ...i, price: unitPrice, originalPrice: hasSale ? basePrice : undefined, hasSale, product: p }
+          return { i, price: unitPrice, originalPrice: hasSale ? basePrice : undefined, hasSale, product: p }
         })
         setItems(mapped)
       } finally {
@@ -65,7 +65,7 @@ export default function OrderPage() {
   }, [])
 
   useEffect(() => {
-    if (!form.email && userEmail) setForm(p => ({ ...p, email: userEmail }))
+    if (!form.email && userEmail) setForm(p => ({ p, email: userEmail }))
   }, [userEmail, form.email])
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function OrderPage() {
   const total = items.reduce((sum: number, i: any) => sum + (i.price * i.quantity), 0)
 
   const updateField = (key: string, value: string) => {
-    setForm(prev => ({ ...prev, [key]: value }))
+    setForm(prev => ({ prev, [key]: value }))
   }
 
   useEffect(() => {

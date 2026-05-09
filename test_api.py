@@ -17,7 +17,7 @@ def test(method, path, expected=200):
     except Exception as e:
         print(f"ERROR: {method} {path} -> {e}")
 
-print("Testing API...")
+print("Testing API")
 print()
 
 test("GET", "/")

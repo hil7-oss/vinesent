@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 
 type User = {
   id: string

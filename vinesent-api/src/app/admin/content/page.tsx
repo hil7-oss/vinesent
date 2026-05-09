@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 
 export default function AdminContentPage() {
   const [content, setContent] = useState<any>(null)
@@ -61,7 +61,7 @@ export default function AdminContentPage() {
     // For now, we focus on collections as requested
   }
 
-  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>
+  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading</div>
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -137,7 +137,7 @@ export default function AdminContentPage() {
                             checked={currentIds.includes(p.id)}
                             onChange={(e) => {
                               const newIds = e.target.checked 
-                                ? [...currentIds, p.id]
+                                ? [currentIds, p.id]
                                 : currentIds.filter((id: string) => id !== p.id)
                               updateCollection(key, { productIds: newIds })
                             }}
@@ -165,7 +165,7 @@ export default function AdminContentPage() {
                         const move = (dir: -1 | 1) => {
                           const ni = idx + dir
                           if (ni < 0 || ni >= currentIds.length) return
-                          const arr = [...currentIds]
+                          const arr = [currentIds]
                           const [item] = arr.splice(idx, 1)
                           arr.splice(ni, 0, item)
                           updateCollection(key, { productIds: arr })

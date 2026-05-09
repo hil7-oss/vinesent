@@ -67,7 +67,7 @@ def list_variants(productId: str | None = None, db: Session = Depends(get_db)):
 def variants_batch(payload: dict[str, Any], db: Session = Depends(get_db), user: dict = Depends(require_admin)):
     """
     Batch create/update variants for a product.
-    payload: {"productId": "...", "variants": [...]}
+    payload: {"productId": "", "variants": []}
     """
     return variants_sync(payload, db, user)
 
@@ -78,7 +78,7 @@ def variants_batch(payload: dict[str, Any], db: Session = Depends(get_db), user:
 def variants_sync(payload: dict[str, Any], db: Session = Depends(get_db), user: dict = Depends(require_admin)):
     """
     Синхронизирует список вариантов для одного продукта.
-    payload: {"productId": "...", "variants": [...]}
+    payload: {"productId": "", "variants": []}
     """
     product_id = str(payload.get("productId") or "").strip()
     variants: list = payload.get("variants") or []

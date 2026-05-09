@@ -59,7 +59,7 @@ def liqpay_pay_order(orderId: str, db: Session = Depends(get_db)):
 
 
 @router.post("/callback")
-def liqpay_callback(data: str = Form(...), signature: str = Form(...), db: Session = Depends(get_db)):
+def liqpay_callback(data: str = Form(), signature: str = Form(), db: Session = Depends(get_db)):
     helper = _liqpay()
     expected = helper._signature(data)
     

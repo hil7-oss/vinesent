@@ -63,6 +63,19 @@ const nextConfig = {
         source: '/uploads/:path*',
         destination: `${FASTAPI_URL}/uploads/:path*`,
       },
+      // Backend routes used with raw fetch() in the code
+      { source: '/products/:path*', destination: `${FASTAPI_URL}/products/:path*` },
+      { source: '/categories/:path*', destination: `${FASTAPI_URL}/categories/:path*` },
+      { source: '/variants/:path*', destination: `${FASTAPI_URL}/variants/:path*` },
+      { source: '/orders/:path*', destination: `${FASTAPI_URL}/orders/:path*` },
+      { source: '/users/:path*', destination: `${FASTAPI_URL}/users/:path*` },
+      { source: '/stores/:path*', destination: `${FASTAPI_URL}/stores/:path*` },
+      { source: '/upload', destination: `${FASTAPI_URL}/upload` },
+      { source: '/content/:path*', destination: `${FASTAPI_URL}/content/:path*` },
+      { source: '/auth/:path*', destination: `${FASTAPI_URL}/auth/:path*` },
+      { source: '/promo-banners/:path*', destination: `${FASTAPI_URL}/promo-banners/:path*` },
+      { source: '/prompt-templates/:path*', destination: `${FASTAPI_URL}/prompt-templates/:path*` },
+      { source: '/health', destination: `${FASTAPI_URL}/health` },
     ]
   },
 }

@@ -12,12 +12,12 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFi
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from ...services.photo_prompts import build_prompts, build_prompts_for_product
+from fastapi_app.services.photo_prompts import build_prompts, build_prompts_for_product
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
-from ...services.gemini_service import get_exact_rgb, rgb_to_hex
-from ...services.prompt_service import render_prompt
+from fastapi_app.services.gemini_service import get_exact_rgb, rgb_to_hex
+from fastapi_app.services.prompt_service import render_prompt
 from fastapi_app.services import gemini_service, cloudinary_service
 from fastapi_app.database import db_session
 from fastapi_app.dependencies import require_admin
@@ -257,7 +257,7 @@ def save_generated_photo(
 
 def append_product_image(db: Session, product_id: str, url: str, image_type: str = "additional", is_generated: bool = True, cloudinary_public_id: Optional[str] = None):
     """Add generated image to product with proper type"""
-    from ...utils.images import add_product_image
+    from fastapi_app.utils.images import add_product_image
     
     row = db.execute(text('SELECT images FROM "Product" WHERE id = :id'), {"id": product_id}).mappings().first()
     if row:
@@ -581,10 +581,10 @@ def upsert_template_endpoint(req: UpsertTemplateRequest):
 
 @router.post("/tryon")
 async def try_on_photo(
-    file: UploadFile = File(...),
-    category: str = Form(...),
-    rgb: str = Form(...),
-    productId: str = Form(...),
+    file: UploadFile = File(),
+    category: str = Form(),
+    rgb: str = Form(),
+    productId: str = Form(),
     prompt: Optional[str] = Form(None),
     promptCategory: Optional[str] = Form(None),
     gender: Optional[str] = Form("male"),
@@ -637,8 +637,8 @@ async def try_on_photo(
 
 @router.post("/generate-multiple")
 async def generate_multiple_photos(
-    productId: str = Form(...),
-    category: str = Form(...),
+    productId: str = Form(),
+    category: str = Form(),
     gender: str = Form("male"),
     colorHex: str = Form("#000000"),
     accent: str = Form("auto"),

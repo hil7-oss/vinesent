@@ -3,21 +3,19 @@ const FASTAPI_SERVER = process.env.FASTAPI_URL || process.env.NEXT_PUBLIC_FASTAP
 
 export function api(path?: string | null): string {
   const pathStr = String(path || '')
-  // Add /api/v1 prefix for admin routes
   const p = pathStr ? (pathStr.startsWith('/') ? pathStr : `/${pathStr}`) : ''
-  const apiPath = p.startsWith('/api/v1') ? p : `/api/v1${p}`
   
   if (typeof window === 'undefined') {
     const raw = String(FASTAPI_SERVER || '').trim()
-    if (raw) return `${raw}${apiPath}`
+    if (raw) return `${raw}${p}`
     const vercelUrl = String(process.env.VERCEL_URL || '').trim()
-    if (vercelUrl) return `https://${vercelUrl}${API_BASE}${apiPath}`
+    if (vercelUrl) return `https://${vercelUrl}${p}`
     const siteUrl = String(process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || '').trim()
-    if (siteUrl) return `${siteUrl.replace(/\/+$/, '')}${API_BASE}${apiPath}`
+    if (siteUrl) return `${siteUrl.replace(/\/+$/, '')}${p}`
     const port = Number(process.env.PORT || 3000) || 3000
-    return `http://localhost:${port}${API_BASE}${apiPath}`
+    return `http://localhost:${port}${p}`
   }
-  return `${API_BASE}${apiPath}`
+  return `${API_BASE}${p}`
 }
 
 function normalize(path: string): string {

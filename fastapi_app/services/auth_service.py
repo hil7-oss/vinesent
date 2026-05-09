@@ -66,7 +66,7 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, password_hash: str) -> bool:
     """
     Поддерживает три формата:
-    - pbkdf2$... (наш формат)
+    - pbkdf2$ (наш формат)
     - $2a$/$2b$/$2y$ (bcrypt — Prisma/Node.js)
     - простое сравнение (legacy)
     """

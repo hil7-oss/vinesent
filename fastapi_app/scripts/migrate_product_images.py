@@ -1,7 +1,7 @@
 """
 Migration script to convert product images from legacy format to new format.
-Legacy: ["url1", "url2", ...]
-New: [{"url": "url1", "type": "front", "order": 0, "isGenerated": false}, ...]
+Legacy: ["url1", "url2", ]
+New: [{"url": "url1", "type": "front", "order": 0, "isGenerated": false}, ]
 
 Run with: python -m fastapi_app.scripts.migrate_product_images
 """
@@ -68,8 +68,8 @@ def migrate_product_images(dry_run: bool = True):
             new_images_json = serialize_product_images(images)
             
             print(f"🔄 Migrating {product_name}:")
-            print(f"   Old: {images_json[:100]}...")
-            print(f"   New: {new_images_json[:100]}...")
+            print(f"   Old: {images_json[:100]}")
+            print(f"   New: {new_images_json[:100]}")
             
             if not dry_run:
                 db.execute(
@@ -116,14 +116,14 @@ if __name__ == "__main__":
     
     if args.apply:
         print("⚠️  APPLYING MIGRATION - Changes will be made to the database!")
-        print("Press Ctrl+C within 5 seconds to cancel...")
+        print("Press Ctrl+C within 5 seconds to cancel")
         import time
         try:
             time.sleep(5)
         except KeyboardInterrupt:
             print("\n❌ Migration cancelled")
             sys.exit(0)
-        print("\n🚀 Starting migration...\n")
+        print("\n🚀 Starting migration\n")
         migrate_product_images(dry_run=False)
     else:
         print("🔍 DRY RUN MODE - No changes will be made")

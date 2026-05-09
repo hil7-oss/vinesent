@@ -11,7 +11,7 @@
 ### 🔴 1.1 Двойная регистрация роутеров в app_factory.py
 ```
 app.include_router(content_router, prefix="/api/v1")
-...
+
 app.include_router(content_router, prefix="")   ← ДУБЛИРУЕТ
 ```
 **Файл:** `app_factory.py` строки 131–161  
@@ -103,7 +103,7 @@ db.execute(text('SELECT * FROM "Product" WHERE id=:id'), {"id": id})
 
 ### 🟡 3.1 `auth.py` использует `text()` для динамического определения колонок
 ```python
-cols = get_user_columns(db)  # SELECT information_schema...
+cols = get_user_columns(db)  # SELECT information_schema
 pass_col = get_password_column(db)  # ещё один запрос
 ```
 При каждом запросе авторизации — 2-3 лишних SELECT к `information_schema`. Это медленно и хрупко. Колонки должны быть в модели.

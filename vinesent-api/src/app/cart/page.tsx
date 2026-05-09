@@ -63,7 +63,7 @@ export default function CartPage() {
 
   const updateQty = async (it: CartItem, delta: number) => {
     if (it.quantity + delta < 1) return
-    const next = items.map(p => p.id === it.id ? { ...p, quantity: p.quantity + delta } : p)
+    const next = items.map(p => p.id === it.id ? { p, quantity: p.quantity + delta } : p)
     setItems(next)
     const toSave = next.map(({ productId, quantity }) => ({ productId, quantity }))
     localStorage.setItem('localCart', JSON.stringify(toSave))

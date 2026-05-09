@@ -12,7 +12,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/products`).then(r => r.json()).then(setProducts).catch(() => setProducts([])).finally(() => setLoading(false))
+    fetch(`${API_BASE}/products`, { cache: 'no-store' }).then(r => r.json()).then(setProducts).catch(() => setProducts([])).finally(() => setLoading(false))
   }, [])
 
   const filtered = useMemo(() => {
@@ -33,7 +33,7 @@ export default function SearchPage() {
             onChange={e => setQ(e.target.value)}
             autoFocus
             className="w-full h-12 pl-12 pr-4 rounded-xl border border-black/15 text-[14px] outline-none focus:border-black/40 transition"
-            placeholder="Пошук товарів..."
+            placeholder="Пошук товарів"
           />
           {q && (
             <button onClick={() => setQ('')} className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 hover:text-black">

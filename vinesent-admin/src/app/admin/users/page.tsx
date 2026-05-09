@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export const dynamic = 'force-dynamic'
 
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 
 type User = {
   id: string
@@ -27,7 +27,7 @@ export default function AdminUsersPage() {
   const fetchUsers = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/v1/users`, { cache: 'no-store' })
+      const res = await fetch(`/users`, { cache: 'no-store' })
       const data = res.ok ? await res.json() : []
       setUsers(Array.isArray(data) ? data : [])
     } catch {

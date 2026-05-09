@@ -7,7 +7,7 @@ import ProductCard from '@/components/product/ProductCard'
 export const dynamic = 'force-dynamic'
 
 async function getCategories() {
-  const res = await fetch(api('/categories'), { next: { revalidate: 3600 } }).catch(() => null)
+  const res = await fetch(api('/categories'), { cache: 'no-store' }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 
@@ -16,7 +16,7 @@ async function getProducts(sub?: string, sort?: string) {
   qs.set('sale', 'true')
   if (sub) qs.set('sub', sub)
   if (sort) qs.set('sort', sort)
-  const res = await fetch(api(`/products?${qs.toString()}`), { next: { revalidate: 300 } }).catch(() => null)
+  const res = await fetch(api(`/products?${qs.toString()}`), { cache: 'no-store' }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 
@@ -54,13 +54,13 @@ export default async function SalePage({ searchParams }: { searchParams: { sort?
         
         <div className="flex items-center gap-2">
           <Link 
-            href={`/sale?${new URLSearchParams({...searchParams, sort: 'price_asc'}).toString()}`}
+            href={`/sale?${new URLSearchParams({ ...searchParams, sort: 'price_asc' }).toString()}`}
             className={`h-9 px-4 flex items-center justify-center border text-[11px] font-medium uppercase tracking-[0.1em] transition-all rounded-[2px] ${searchParams?.sort === 'price_asc' ? 'bg-black text-white border-black' : 'bg-transparent text-black border-[#E5E5E5] hover:border-black'}`}
           >
             Ціна ↑
           </Link>
           <Link 
-            href={`/sale?${new URLSearchParams({...searchParams, sort: 'price_desc'}).toString()}`}
+            href={`/sale?${new URLSearchParams({ ...searchParams, sort: 'price_desc' }).toString()}`}
             className={`h-9 px-4 flex items-center justify-center border text-[11px] font-medium uppercase tracking-[0.1em] transition-all rounded-[2px] ${searchParams?.sort === 'price_desc' ? 'bg-black text-white border-black' : 'bg-transparent text-black border-[#E5E5E5] hover:border-black'}`}
           >
             Ціна ↓

@@ -3,6 +3,7 @@ routers/prompts.py — Admin API for managing AI prompts.
 
 Endpoints:
   GET  /api/admin/prompts                     — full prompts.json dump
+  POST /api/admin/prompts/raw                 — overwrite full prompts.json
   GET  /api/admin/prompts/photo               — photo prompts overview
   GET  /api/admin/prompts/photo/{accent}      — all views for accent
   PUT  /api/admin/prompts/photo/{accent}/{view} — set custom prompt for view
@@ -28,14 +29,15 @@ from pydantic import BaseModel
 
 from fastapi_app.dependencies import require_admin
 from fastapi_app.services import prompt_service
-from ...services.photo_prompts import (
+from fastapi_app.services.photo_prompts import (
     ACCENT_LABELS,
-    ACCENT_VIEWS,
-    VIEW_LABELS,
     build_prompts_for_product,
+    get_accent_views,
     get_default_gender_blocks,
     get_default_strict_block,
+    get_view_label,
 )
+from fastapi_app.services.prompt_service import get_accent_labels as _get_accent_labels
 
 router = APIRouter(
     prefix="/api/admin/prompts",
@@ -49,6 +51,7 @@ SEO_KEYS = {
     "generate_product_content": "Product content",
     "parse_product_autofill": "Product autofill",
     "generate_sewing_measurements": "Sewing measurements",
+    "virtual_try_on": "Virtual try-on",
 }
 
 
@@ -91,6 +94,216 @@ def get_all_prompts():
     }
 
 
+@router.post("/raw")
+def update_all_prompts(body: dict):
+    """Overwrite full prompts.json content."""
+    photo = body.get("photo")
+    seo = body.get("seo")
+    prompt_service.save_prompts(photo=photo, seo=seo)
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Validation helpers
+# ---------------------------------------------------------------------------
+
+def _accent_exists(accent: str) -> bool:
+    """Check accent exists in photo prompts data (custom, default, or accent_labels)."""
+    custom = prompt_service.load_custom_photo_prompts()
+    defaults = prompt_service.load_default_photo_prompts()
+    return (
+        (accent in custom and isinstance(custom[accent], dict))
+        or (accent in defaults and isinstance(defaults[accent], dict))
+        or accent in _get_accent_labels()
+    )
+
+
+def _require_accent(accent: str):
+    if not _accent_exists(accent):
+        raise HTTPException(404, f"Unknown accent: {accent}")
+
+
+def _require_view(accent: str, view: str):
+    if view not in get_accent_views(accent):
+        raise HTTPException(404, f"Unknown view '{view}' for accent '{accent}'")
+
+
+# ---------------------------------------------------------------------------
+# View management (add / delete / reorder)
+# ---------------------------------------------------------------------------
+
+class CreateViewBody(BaseModel):
+    view: str
+    label: str = ""
+    prompt: str = ""
+
+
+class ReorderViewsBody(BaseModel):
+    views: list[str]
+
+
+class UpdateLabelBody(BaseModel):
+    label: str
+
+
+class BodyViewBody(BaseModel):
+    accent: str
+    view: str
+
+
+class BodyPromptBody(BodyViewBody):
+    prompt: str
+
+
+class BodyLabelBody(BodyViewBody):
+    label: str
+
+
+class CreateAccentBody(BaseModel):
+    accent: str
+    label: str = ""
+
+
+class UpdateGenderBlocksBody(BaseModel):
+    boy: str = ""
+    girl: str = ""
+    unisex: str = ""
+
+
+@router.post("/photo/{accent}/views")
+def create_photo_view(accent: str, body: CreateViewBody):
+    """Add a new view (ракурс) to an accent."""
+    _require_accent(accent)
+    view_key = body.view.strip()
+    if not view_key:
+        raise HTTPException(400, "view key cannot be empty")
+    if view_key.startswith("_"):
+        raise HTTPException(400, "view key cannot start with '_'")
+    if view_key in get_accent_views(accent):
+        raise HTTPException(409, f"View '{view_key}' already exists for accent '{accent}'")
+    label = body.label.strip() or view_key
+    prompt = body.prompt.strip() or ""
+    prompt_service.create_photo_view(accent, view_key, label, prompt)
+    return {"ok": True, "accent": accent, "view": view_key}
+
+
+@router.put("/photo/{accent}/{view}/label")
+def update_view_label(accent: str, view: str, body: UpdateLabelBody):
+    """Update the display label for a view."""
+    _require_accent(accent)
+    _require_view(accent, view)
+    label = body.label.strip()
+    if not label:
+        raise HTTPException(400, "label cannot be empty")
+    prompt_service.update_photo_view_label(accent, view, label)
+    return {"ok": True, "accent": accent, "view": view, "label": label}
+
+
+@router.put("/photo/{accent}/reorder")
+def reorder_photo_views(accent: str, body: ReorderViewsBody):
+    """Set the display order of views for an accent."""
+    _require_accent(accent)
+    if not body.views:
+        raise HTTPException(400, "views list cannot be empty")
+    prompt_service.update_photo_view_order(accent, body.views)
+    return {"ok": True, "accent": accent}
+
+
+@router.delete("/photo/{accent}/{view}/delete")
+def delete_photo_view(accent: str, view: str):
+    """Permanently remove a view (ракурс) from an accent (path-based)."""
+    _require_accent(accent)
+    _require_view(accent, view)
+    prompt_service.delete_photo_view(accent, view)
+    return {"ok": True, "accent": accent, "view": view, "deleted": True}
+
+
+# ---------------------------------------------------------------------------
+# Body-based equivalents for views with special chars (e.g. "3/4")
+#   Next.js rewrites decode %2F in :path*, so path params break for "/".
+#   These pass accent + view in the request body to avoid URL encoding issues.
+# ---------------------------------------------------------------------------
+
+@router.put("/photo/view/set-prompt")
+def set_photo_prompt_body(body: BodyPromptBody):
+    """Save custom prompt override — accent/view in body (avoids URL encoding)."""
+    _require_accent(body.accent)
+    _require_view(body.accent, body.view)
+    if not body.prompt.strip():
+        raise HTTPException(400, "prompt cannot be empty")
+    prompt_service.set_photo_prompt_override(body.accent, body.view, body.prompt.strip())
+    return {"ok": True, "accent": body.accent, "view": body.view}
+
+
+@router.delete("/photo/view/reset")
+def reset_photo_view_body(body: BodyViewBody):
+    """Reset single view to default — accent/view in body."""
+    _require_accent(body.accent)
+    prompt_service.reset_photo_prompt_override(body.accent, body.view)
+    return {"ok": True, "accent": body.accent, "view": body.view, "reset": True}
+
+
+@router.delete("/photo/view/delete")
+def delete_photo_view_body(body: BodyViewBody):
+    """Permanently remove a view — accent/view in body."""
+    _require_accent(body.accent)
+    _require_view(body.accent, body.view)
+    prompt_service.delete_photo_view(body.accent, body.view)
+    return {"ok": True, "accent": body.accent, "view": body.view, "deleted": True}
+
+
+@router.put("/photo/view/label")
+def update_view_label_body(body: BodyLabelBody):
+    """Update display label for a view — accent/view in body."""
+    _require_accent(body.accent)
+    _require_view(body.accent, body.view)
+    label = body.label.strip()
+    if not label:
+        raise HTTPException(400, "label cannot be empty")
+    prompt_service.update_photo_view_label(body.accent, body.view, label)
+    return {"ok": True, "accent": body.accent, "view": body.view, "label": label}
+
+
+# ---------------------------------------------------------------------------
+# Accent CRUD (create / delete whole accent blocks)
+# ---------------------------------------------------------------------------
+
+@router.post("/photo/{accent}/block")
+def create_accent_block(accent: str, body: CreateAccentBody):
+    """Create a new empty accent block."""
+    if _accent_exists(accent):
+        raise HTTPException(409, f"Accent '{accent}' already exists")
+    label = body.label.strip() or accent
+    prompt_service.create_photo_accent(accent, label)
+    return {"ok": True, "accent": accent, "label": label}
+
+
+@router.delete("/photo/{accent}/block")
+def delete_accent_block(accent: str):
+    """Permanently remove an entire accent block."""
+    _require_accent(accent)
+    prompt_service.delete_photo_accent(accent)
+    return {"ok": True, "accent": accent, "deleted": True}
+
+
+# ---------------------------------------------------------------------------
+# Gender blocks
+# ---------------------------------------------------------------------------
+
+@router.put("/photo/defaults/gender")
+def update_gender_blocks(body: UpdateGenderBlocksBody):
+    """Update gender description blocks (boy/girl/unisex)."""
+    blocks = {}
+    if body.boy:
+        blocks["_gender_boy"] = body.boy
+    if body.girl:
+        blocks["_gender_girl"] = body.girl
+    if body.unisex:
+        blocks["_gender_unisex"] = body.unisex
+    prompt_service.update_gender_blocks(blocks)
+    return {"ok": True}
+
+
 # ---------------------------------------------------------------------------
 # Photo prompts
 # ---------------------------------------------------------------------------
@@ -100,16 +313,23 @@ def get_photo_prompts_overview():
     """Return overview of all photo prompts with accent/view metadata and custom status."""
     custom = prompt_service.load_custom_photo_prompts()
     defaults = prompt_service.load_default_photo_prompts()
+    dynamic_labels = _get_accent_labels()
+    all_accents: set[str] = set()
+    for d in (custom, defaults):
+        if isinstance(d, dict):
+            all_accents.update(k for k in d if isinstance(d[k], dict))
+    all_accents.update(dynamic_labels.keys())
     result = {}
-    for accent, views in ACCENT_VIEWS.items():
+    for accent in sorted(all_accents):
+        label = dynamic_labels.get(accent) or ACCENT_LABELS.get(accent, accent)
         result[accent] = {
-            "label": ACCENT_LABELS[accent],
+            "label": label,
             "views": [
                 {
                     "view": v,
                     "has_custom": custom.get(accent, {}).get(v) != defaults.get(accent, {}).get(v),
                 }
-                for v in views
+                for v in get_accent_views(accent)
             ],
         }
     return result
@@ -133,16 +353,17 @@ def get_photo_defaults(accent: str):
     Return built-in default prompts for given accent (no custom overrides applied).
     Useful to show original text when resetting.
     """
-    if accent not in ACCENT_VIEWS:
-        raise HTTPException(404, f"Unknown accent: {accent}")
+    _require_accent(accent)
     defaults = prompt_service.load_default_photo_prompts()
     accent_defaults = defaults.get(accent, {})
+    dynamic_labels = _get_accent_labels()
+    label = dynamic_labels.get(accent) or ACCENT_LABELS.get(accent, accent)
     return {
         "accent": accent,
-        "label": ACCENT_LABELS[accent],
+        "label": label,
         "views": [
-            {"view": view, "label": VIEW_LABELS.get(view, view), "prompt": accent_defaults.get(view, "")}
-            for view in ACCENT_VIEWS[accent]
+            {"view": view, "label": get_view_label(accent, view), "prompt": accent_defaults.get(view, "")}
+            for view in get_accent_views(accent)
         ],
     }
 
@@ -150,8 +371,7 @@ def get_photo_defaults(accent: str):
 @router.get("/photo/{accent}")
 def get_photo_accent(accent: str):
     """Return current (custom or default) prompts for given accent."""
-    if accent not in ACCENT_VIEWS:
-        raise HTTPException(404, f"Unknown accent: {accent}")
+    _require_accent(accent)
     custom = prompt_service.load_custom_photo_prompts()
     defaults = prompt_service.load_default_photo_prompts()
     samples = build_prompts_for_product(
@@ -160,9 +380,11 @@ def get_photo_accent(accent: str):
         color_hex="#000000",
         image_type=accent,
     )
+    dynamic_labels = _get_accent_labels()
+    label = dynamic_labels.get(accent) or ACCENT_LABELS.get(accent, accent)
     return {
         "accent": accent,
-        "label": ACCENT_LABELS[accent],
+        "label": label,
         "views": [
             {
                 "view": p["view"],
@@ -178,10 +400,8 @@ def get_photo_accent(accent: str):
 @router.put("/photo/{accent}/{view}")
 def set_photo_prompt(accent: str, view: str, body: SetPromptBody):
     """Save custom prompt override for accent/view."""
-    if accent not in ACCENT_VIEWS:
-        raise HTTPException(404, f"Unknown accent: {accent}")
-    if view not in ACCENT_VIEWS[accent]:
-        raise HTTPException(404, f"Unknown view '{view}' for accent '{accent}'")
+    _require_accent(accent)
+    _require_view(accent, view)
     if not body.prompt.strip():
         raise HTTPException(400, "prompt cannot be empty")
     prompt_service.set_photo_prompt_override(accent, view, body.prompt.strip())
@@ -191,8 +411,7 @@ def set_photo_prompt(accent: str, view: str, body: SetPromptBody):
 @router.delete("/photo/{accent}/{view}")
 def reset_photo_prompt_view(accent: str, view: str):
     """Reset a single view to built-in default."""
-    if accent not in ACCENT_VIEWS:
-        raise HTTPException(404, f"Unknown accent: {accent}")
+    _require_accent(accent)
     prompt_service.reset_photo_prompt_override(accent, view)
     return {"ok": True, "accent": accent, "view": view, "reset": True}
 
@@ -200,8 +419,7 @@ def reset_photo_prompt_view(accent: str, view: str):
 @router.delete("/photo/{accent}")
 def reset_photo_accent(accent: str):
     """Reset all views for given accent to built-in defaults."""
-    if accent not in ACCENT_VIEWS:
-        raise HTTPException(404, f"Unknown accent: {accent}")
+    _require_accent(accent)
     prompt_service.reset_photo_prompt_override(accent, view=None)
     return {"ok": True, "accent": accent, "reset": True}
 
@@ -209,8 +427,7 @@ def reset_photo_accent(accent: str):
 @router.post("/photo/preview")
 def preview_photo_prompt(body: PhotoPreviewBody):
     """Preview the rendered prompt for given accent/view with real substituted values."""
-    if body.accent not in ACCENT_VIEWS:
-        raise HTTPException(404, f"Unknown accent: {body.accent}")
+    _require_accent(body.accent)
     prompts = build_prompts_for_product(
         category=body.category,
         gender=body.gender,

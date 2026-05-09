@@ -10,12 +10,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from fastapi_app.database import get_db
-from fastapi_app.schemas import CategoryCreate, CategoryOut, CategoryUpdate
+from fastapi_app.schemas import CategoryCreate, CategoryOut, CategoryUpdate, ReorderItem
+from fastapi_app.dependencies import require_admin
 
 router = APIRouter(prefix="/categories", tags=["categories"])
 
 
-from ...core.cache import cache_get, cache_set, cache_del
+from fastapi_app.core.cache import cache_get, cache_set, cache_del
 
 
 def slugify_value(value: str):
@@ -29,7 +30,7 @@ def slugify_value(value: str):
         "ю": "yu", "я": "ya",
         "А": "a", "Б": "b", "В": "v", "Г": "h", "Ґ": "g", "Д": "d", "Е": "e", "Є": "ye",
         "Ж": "zh", "З": "z", "И": "y", "І": "i", "Ї": "yi", "Й": "y", "К": "k", "Л": "l",
-        "М": "m", "Н": "n", "О": "o", "П": "p", "Р": "r", "С": "s", "Т": "t", "У": "u",
+        "М": "m", "Н": "n", "О": "o", "П": "p", "р": "r", "с": "s", "т": "t", "у": "u",
         "Ф": "f", "Х": "kh", "Ц": "ts", "Ч": "ch", "Ш": "sh", "Щ": "shch", "Ь": "",
         "Ю": "yu", "Я": "ya",
         "ё": "yo", "Ё": "yo", "ы": "y", "Ы": "y", "э": "e", "Э": "e", "ъ": "", "Ъ": "",
@@ -65,80 +66,88 @@ def ensure_unique_category_slug(db: Session, base: str, exclude_id: str | None =
 @router.get("", response_model=list[CategoryOut])
 @router.get("/", response_model=list[CategoryOut])
 def list_categories(db: Session = Depends(get_db)):
-    key = "categories:list"
-    cached = cache_get(key, ttl_s=2.0)
-    if cached is not None:
-        return cached
-    
-    # Fetch categories
-    q = text('SELECT id,name,slug,description,image,"parentId" FROM "Category"')
-    res = db.execute(q).mappings().all()
-    
-    direct_map: dict[str, set[str]] = {}
-    valid_pids = {str(r["id"]) for r in db.execute(text('SELECT id FROM "Product"')).mappings().all()}
-    links = db.execute(text('SELECT "A", "B" FROM "_ProductCategories"')).fetchall()
-    for cid, pid in links:
-        if not cid or not pid:
-            continue
-        if str(pid) in valid_pids:
-            direct_map.setdefault(cid, set()).add(str(pid))
-    
-    legacy = db.execute(text('SELECT id, "categoryId" FROM "Product" WHERE "categoryId" IS NOT NULL AND "categoryId" <> \'\'')).fetchall()
-    for pid, cid in legacy:
-        if not cid or not pid:
-            continue
-        if str(pid) in valid_pids:
-            direct_map.setdefault(cid, set()).add(str(pid))
-    
-    children_by_parent: dict[str, list[str]] = {}
-    for row in res:
-        parent_id = row.get("parentId")
-        if parent_id:
-            children_by_parent.setdefault(parent_id, []).append(row["id"])
-    
-    count_map: dict[str, int] = {}
-    slug_map = {row["id"]: str(row.get("slug") or "").lower() for row in res}
-    
-    # Special handling for SALE and NEW categories
-    sale_count = db.execute(text("""
-        SELECT COUNT(DISTINCT p.id) AS c
-        FROM "Product" p
-        LEFT JOIN "ProductVariant" v ON v."productId" = p.id
-        WHERE (COALESCE(p."salePrice", 0) > 0 AND p."salePrice" < p."price") OR (COALESCE(v."salePrice", 0) > 0 AND v."salePrice" < v."price")
-    """)).mappings().first().get("c", 0)
-    
-    th = (datetime.utcnow() - timedelta(days=60))
-    th_sql = th.isoformat()
-    new_count = db.execute(text("""
-        SELECT COUNT(*) AS c
-        FROM "Product"
-        WHERE "createdAt" >= :th
-    """), {"th": th_sql}).mappings().first().get("c", 0)
-    
-    for row in res:
-        root_id = row["id"]
-        stack = [root_id]
-        all_ids: set[str] = set()
-        while stack:
-            current = stack.pop()
-            all_ids |= direct_map.get(current, set())
-            stack.extend(children_by_parent.get(current, []))
+    try:
+        key = "categories:list"
+        cached = cache_get(key, ttl_s=2.0)
+        if cached is not None:
+            return cached
         
-        if slug_map.get(root_id) == "sale":
-            count_map[root_id] = int(sale_count)
-        elif slug_map.get(root_id) == "new":
-            count_map[root_id] = int(new_count)
-        else:
-            count_map[root_id] = len(all_ids)
-    
-    out = []
-    for r in res:
-        d = dict(r)
-        d['productCount'] = count_map.get(d['id'], 0)
-        out.append(CategoryOut(**d))
-    
-    cache_set(key, out)
-    return out
+        # Fetch categories
+        q = text('SELECT id,name,slug,description,image,"parentId","order" FROM "Category" ORDER BY "order" ASC, name ASC')
+        res = db.execute(q).mappings().all()
+        
+        direct_map: dict[str, set[str]] = {}
+        valid_pids = {str(r["id"]) for r in db.execute(text('SELECT id FROM "Product"')).mappings().all()}
+        links = db.execute(text('SELECT "A", "B" FROM "_ProductCategories"')).fetchall()
+        for cid, pid in links:
+            if not cid or not pid:
+                continue
+            if str(pid) in valid_pids:
+                direct_map.setdefault(cid, set()).add(str(pid))
+        
+        legacy = db.execute(text('SELECT id, "categoryId" FROM "Product" WHERE "categoryId" IS NOT NULL AND "categoryId" <> \'\'')).fetchall()
+        for pid, cid in legacy:
+            if not cid or not pid:
+                continue
+            if str(pid) in valid_pids:
+                direct_map.setdefault(cid, set()).add(str(pid))
+        
+        children_by_parent: dict[str, list[str]] = {}
+        for row in res:
+            parent_id = row.get("parentId")
+            if parent_id:
+                children_by_parent.setdefault(parent_id, []).append(row["id"])
+        
+        count_map: dict[str, int] = {}
+        slug_map = {row["id"]: str(row.get("slug") or "").lower() for row in res}
+        
+        # Special handling for SALE and NEW categories
+        sale_res = db.execute(text("""
+            SELECT COUNT(DISTINCT p.id) AS c
+            FROM "Product" p
+            LEFT JOIN "ProductVariant" v ON v."productId" = p.id
+            WHERE (COALESCE(p."salePrice", 0) > 0 AND p."salePrice" < p."price") OR (COALESCE(v."salePrice", 0) > 0 AND v."salePrice" < v."price")
+        """)).mappings().first()
+        sale_count = sale_res.get("c", 0) if sale_res else 0
+        
+        th = (datetime.utcnow() - timedelta(days=60))
+        th_sql = th.isoformat()
+        new_res = db.execute(text("""
+            SELECT COUNT(*) AS c
+            FROM "Product"
+            WHERE "createdAt" >= :th
+        """), {"th": th_sql}).mappings().first()
+        new_count = new_res.get("c", 0) if new_res else 0
+        
+        for row in res:
+            root_id = row["id"]
+            stack = [root_id]
+            all_ids: set[str] = set()
+            while stack:
+                current = stack.pop()
+                all_ids |= direct_map.get(current, set())
+                stack.extend(children_by_parent.get(current, []))
+            
+            if slug_map.get(root_id) == "sale":
+                count_map[root_id] = int(sale_count)
+            elif slug_map.get(root_id) == "new":
+                count_map[root_id] = int(new_count)
+            else:
+                count_map[root_id] = len(all_ids)
+        
+        out = []
+        for r in res:
+            d = dict(r)
+            d['productCount'] = count_map.get(d['id'], 0)
+            out.append(CategoryOut(**d))
+        
+        cache_set(key, out)
+        return out
+    except Exception as e:
+        import traceback
+        logging.error(f"Error in list_categories: {e}")
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("", response_model=CategoryOut)
@@ -170,16 +179,30 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db)):
     ))
     db.commit()
     
-    sel = text('SELECT id,name,slug,description,image,"parentId" FROM "Category" WHERE id=:id')
+    sel = text('SELECT id,name,slug,description,image,"parentId","order" FROM "Category" WHERE id=:id')
     row = db.execute(sel, dict(id=new_id)).mappings().first()
     
     cache_del("categories")
     return CategoryOut(**dict(row))
 
 
+@router.put("/reorder", response_model=list[CategoryOut])
+def reorder_categories(payload: list[ReorderItem], db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+    for item in payload:
+        db.execute(
+            text('UPDATE "Category" SET "order"=:order,"updatedAt"=:u WHERE id=:id'),
+            {"id": item.id, "order": item.order, "u": datetime.utcnow().isoformat()},
+        )
+    db.commit()
+    cache_del("categories")
+    sel = text('SELECT id,name,slug,description,image,"parentId","order" FROM "Category" ORDER BY "order" ASC, name ASC')
+    rows = db.execute(sel).mappings().all()
+    return [CategoryOut(**dict(r)) for r in rows]
+
+
 @router.get("/{category_id}", response_model=CategoryOut)
 def get_category(category_id: str, db: Session = Depends(get_db)):
-    sel = text('SELECT id,name,slug,description,image,"parentId" FROM "Category" WHERE id=:id')
+    sel = text('SELECT id,name,slug,description,image,"parentId","order" FROM "Category" WHERE id=:id')
     row = db.execute(sel, dict(id=category_id)).mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -188,7 +211,7 @@ def get_category(category_id: str, db: Session = Depends(get_db)):
 
 @router.put("/{category_id}", response_model=CategoryOut)
 def update_category(category_id: str, payload: CategoryUpdate, db: Session = Depends(get_db)):
-    sel = text('SELECT id,name,slug,description,image,"parentId" FROM "Category" WHERE id=:id')
+    sel = text('SELECT id,name,slug,description,image,"parentId","order" FROM "Category" WHERE id=:id')
     row = db.execute(sel, dict(id=category_id)).mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="Category not found")
@@ -196,7 +219,8 @@ def update_category(category_id: str, payload: CategoryUpdate, db: Session = Dep
     data = dict(row)
     current_slug = str(data.get("slug") or "").strip().lower()
     
-    if current_slug in {"sale", "new"}:
+    # Only check reserved categories if trying to change name or slug
+    if (payload.name or payload.slug) and current_slug in {"sale", "new"}:
         raise HTTPException(status_code=400, detail="Reserved category cannot be updated")
     
     if payload.slug and payload.slug != data["slug"]:
@@ -210,10 +234,13 @@ def update_category(category_id: str, payload: CategoryUpdate, db: Session = Dep
         data["slug"] = candidate
     
     for field, value in payload.model_dump(exclude_unset=True).items():
-        data[field] = value
+        if field == "parentId" and value == "":
+            data[field] = None
+        else:
+            data[field] = value
     
     upd = text(
-        'UPDATE "Category" SET name=:name,slug=:slug,description=:description,image=:image,"parentId"=:parentId,"updatedAt"=:updatedAt WHERE id=:id'
+        'UPDATE "Category" SET name=:name,slug=:slug,description=:description,image=:image,"parentId"=:parentId,"order"=:order,"updatedAt"=:updatedAt WHERE id=:id'
     )
     db.execute(
         upd,
@@ -224,6 +251,7 @@ def update_category(category_id: str, payload: CategoryUpdate, db: Session = Dep
             description=data.get("description"),
             image=data.get("image"),
             parentId=data.get("parentId"),
+            order=data.get("order", 0),
             updatedAt=datetime.utcnow().isoformat(),
         ),
     )
@@ -232,7 +260,6 @@ def update_category(category_id: str, payload: CategoryUpdate, db: Session = Dep
     row = db.execute(sel, dict(id=category_id)).mappings().first()
     cache_del("categories")
     return CategoryOut(**dict(row))
-
 
 @router.delete("/{category_id}")
 def delete_category(category_id: str, db: Session = Depends(get_db)):

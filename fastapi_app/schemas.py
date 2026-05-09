@@ -38,6 +38,7 @@ class ProductCreate(BaseModel):
     cost: Optional[float] = None
     images: str
     stock: int = 0
+    gender: Optional[str] = None
     seoTitle: Optional[str] = None
     seoDescription: Optional[str] = None
     categoryId: Optional[str] = None
@@ -52,6 +53,7 @@ class ProductUpdate(BaseModel):
     cost: Optional[float] = None
     images: Optional[str] = None
     stock: Optional[int] = None
+    gender: Optional[str] = None
     seoTitle: Optional[str] = None
     seoDescription: Optional[str] = None
     categoryId: Optional[str] = None
@@ -68,6 +70,7 @@ class ProductOut(BaseModel):
     images: str
     stock: int
     isArchived: bool = False
+    gender: Optional[str] = None
     seoTitle: Optional[str] = None
     seoDescription: Optional[str] = None
     categoryId: Optional[str] = None
@@ -159,6 +162,10 @@ class CollectionUpdate(BaseModel):
     description: Optional[str] = None
     image: Optional[str] = None
     productIds: Optional[List[str]] = None
+
+class ReorderItem(BaseModel):
+    id: str
+    order: int
 
 class RecommendationRes(BaseModel):
     similar: List[ProductOut] = []

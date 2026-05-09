@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export const dynamic = 'force-dynamic'
 
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 
 type Store = {
   id: string
@@ -25,7 +25,7 @@ export default function AdminStoresPage() {
   const fetchStores = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/v1/stores`, { cache: 'no-store' })
+      const res = await fetch(`/stores`, { cache: 'no-store' })
       const data = res.ok ? await res.json() : []
       setStores(Array.isArray(data) ? data : [])
     } catch {
@@ -58,7 +58,7 @@ export default function AdminStoresPage() {
     if (!form.name.trim()) { setError("Вкажіть назву"); return }
     setSaving(true); setError('')
     try {
-      const url = editingId ? `${API_BASE}/api/v1/stores/${editingId}` : `${API_BASE}/api/v1/stores`
+      const url = editingId ? `/stores/${editingId}` : `/stores`
       const res = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,7 +86,7 @@ export default function AdminStoresPage() {
 
   const remove = async (id: string) => {
     if (!confirm('Видалити точку самовивозу?')) return
-    await fetch(`${API_BASE}/api/v1/stores/${id}`, { method: 'DELETE' })
+    await fetch(`/stores/${id}`, { method: 'DELETE' })
     fetchStores()
   }
 
@@ -127,7 +127,7 @@ export default function AdminStoresPage() {
             </div>
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Google Maps URL</div>
-              <input value={form.mapsUrl} onChange={e => setForm(p => ({ ...p, mapsUrl: e.target.value }))} className="w-full h-11 px-4 rounded-xl border border-black/15 text-[13px] outline-none focus:border-black/40 transition" placeholder="https://maps.app.goo.gl/..." />
+              <input value={form.mapsUrl} onChange={e => setForm(p => ({ ...p, mapsUrl: e.target.value }))} className="w-full h-11 px-4 rounded-xl border border-black/15 text-[13px] outline-none focus:border-black/40 transition" placeholder="https://maps.app.goo.gl/" />
             </div>
             {error && <div className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</div>}
             <div className="flex items-center gap-2 pt-2">

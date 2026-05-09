@@ -9,6 +9,8 @@ from google.genai import types
 from PIL import Image
 import logging
 
+from fastapi_app.services import prompt_service
+
 _log = logging.getLogger(__name__)
 _SLEEP_EVENT = threading.Event()
 
@@ -177,19 +179,12 @@ def generate_fashion_photo(image_path: str, prompt: str) -> bytes:
 def generate_seo_text(product_name: str, product_description: str, category: str) -> dict:
     client = get_client()
     model_name = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.0-flash")
-    prompt = (
-        "Згенеруй SEO метадані для товару двома мовами: українською (uk) та російською (ru).\n"
-        "Поверни рівно шість рядків у такому форматі:\n"
-        "UK Title: <назва до 60 символів>\n"
-        "UK Description: <опис до 160 символів>\n"
-        "UK Keywords: <5 коротких фраз через кому>\n"
-        "RU Title: <название до 60 символов>\n"
-        "RU Description: <описание до 160 символов>\n"
-        "RU Keywords: <5 коротких фраз через запятую>\n"
-        f"Назва/Название: {product_name}\n"
-        f"Опис/Описание: {product_description}\n"
-        f"Категорія/Категория: {category}\n"
-        "Без лишнього тексту, тільки зазначені шість рядків."
+    template = prompt_service.get_required_seo_prompt("generate_seo_text")
+    prompt = prompt_service.render_prompt(
+        template,
+        product_name=product_name,
+        product_description=product_description,
+        category=category,
     )
     resp = client.models.generate_content(
         model=model_name,
@@ -243,27 +238,13 @@ def generate_seo_text(product_name: str, product_description: str, category: str
 def generate_product_content(seed_text: str, category: str, audience: str, brand: str = "VINESENT") -> dict:
     client = get_client()
     model_name = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.0-flash")
-    prompt = (
-        "Ти e-commerce copywriter та SEO спеціаліст.\n"
-        "Згенеруй структурований JSON строго такого формату без додаткового тексту:\n"
-        "{"
-        "\"name\":\"\","
-        "\"description\":\"\","
-        "\"seoTitle\":\"\","
-        "\"seoDescription\":\"\","
-        "\"keywords\":[\"\", \"\", \"\", \"\", \"\", \"\", \"\", \"\"]"
-        "}\n"
-        "Вимоги:\n"
-        "- Мова: українська.\n"
-        "- Назва: до 70 символів, конкретна, комерційна.\n"
-        "- Опис: 300–600 символів, 1–2 абзаци, факти, переваги, матеріали, сценарії використання.\n"
-        "- seoTitle: до 60 символів, має включати бренд та основний намір пошуку.\n"
-        "- seoDescription: до 160 символів.\n"
-        "- keywords: 6–8 коротких ключових фраз.\n"
-        f"- Бренд: {brand}\n"
-        f"- Категорія: {category or 'дитячий одяг'}\n"
-        f"- Цільова аудиторія: {audience or 'унісекс'}\n"
-        f"- Вхідні деталі від менеджера: {seed_text}\n"
+    template = prompt_service.get_required_seo_prompt("generate_product_content")
+    prompt = prompt_service.render_prompt(
+        template,
+        seed_text=seed_text or "",
+        category=category or "дитячий одяг",
+        audience=audience or "унісекс",
+        brand=brand,
     )
     resp = client.models.generate_content(
         model=model_name,
@@ -314,18 +295,14 @@ def generate_sewing_measurements(product_name: str, product_description: str, ca
     client = get_client()
     model_name = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.0-flash")
     sizes_norm = [str(s).strip() for s in (sizes or []) if str(s).strip()]
-    prompt = (
-        "Ти технолог-конструктор дитячого одягу.\n"
-        "Згенеруй тільки валідний JSON без додаткового тексту.\n"
-        "Формат: ключ — розмір (рядок), значення — об'єкт замірів (усі значення як рядки з 'см').\n"
-        "Використовуй ключі замірів англійською: chest, waist, hips, length, sleeve, shoulder.\n"
-        "Якщо якийсь замір не застосовний — не додавай його.\n"
-        "Ключі-розміри мають бути тільки з вхідного списку.\n"
-        f"Назва товару: {product_name}\n"
-        f"Опис: {product_description}\n"
-        f"Категорія: {category}\n"
-        f"Стать/аудиторія: {gender}\n"
-        f"Список розмірів: {json.dumps(sizes_norm, ensure_ascii=False)}\n"
+    template = prompt_service.get_required_seo_prompt("generate_sewing_measurements")
+    prompt = prompt_service.render_prompt(
+        template,
+        product_name=product_name,
+        product_description=product_description,
+        category=category,
+        gender=gender,
+        sizes_json=json.dumps(sizes_norm, ensure_ascii=False),
     )
     resp = client.models.generate_content(
         model=model_name,
@@ -366,7 +343,7 @@ def fallback_product_content(seed_text: str, category: str, audience: str, brand
         seed = "базовий товар"
     name = f"{cat}: {seed}".strip()
     if len(name) > 70:
-        name = name[:67].rstrip() + "..."
+        name = name[:67].rstrip() + ""
     description = (
         f"{name} для {aud}. "
         f"Комфортна посадка, приємні матеріали та практичний крій для щоденного використання. "
@@ -386,36 +363,11 @@ def fallback_product_content(seed_text: str, category: str, audience: str, brand
 def parse_product_autofill(input_text: str, brand: str = "VINESENT") -> dict:
     client = get_client()
     model_name = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.0-flash")
-    prompt = (
-        "Ти отримуєш неструктурований текст від менеджера магазину з описом товару.\n"
-        "Поверни СТРОГО валідний JSON без додаткового пояснення у такому форматі:\n"
-        "{\n"
-        "  \"name\": \"\",                  \n"
-        "  \"description\": \"\",           \n"
-        "  \"seoTitle\": \"\",              \n"
-        "  \"seoDescription\": \"\",        \n"
-        "  \"keywords\": [\"\", \"\", \"\", \"\", \"\"],\n"
-        "  \"categorySlug\": \"\",          \n"
-        "  \"categoryName\": \"\",          \n"
-        "  \"price\": 0,                    \n"
-        "  \"salePrice\": 0,                \n"
-        "  \"stock\": 0,                    \n"
-        "  \"colors\": [\"\"],              \n"
-        "  \"sizes\": [\"\"],               \n"
-        "  \"discountPercent\": 0,          \n"
-        "  \"audience\": \"\"               \n"
-        "}\n"
-        "Вимоги:\n"
-        "- description: 300–600 символів, комерційний, без 'вода'.\n"
-        "- seoTitle: до 60 символів, включає бренд та намір пошуку.\n"
-        f"- бренд: {brand}\n"
-        "- categorySlug: короткий слаг на англійській (girl, boy, winter, spring, summer, autumn, casual, shoes, accessories) або предмет (dress, pants, tshirt...).\n"
-        "- price/salePrice/stock: числа; якщо не вказано — 0.\n"
-        "- colors: список назв або HEX. Якщо вказано кілька кольорів — перелічи всі.\n"
-        "- sizes: список. ОБОВ'ЯЗКОВО витягуй числові сітки (наприклад 92,98,104 або S,M,L). Якщо вказано діапазон (напр. 92-128), розгорни його в повний список основних дитячих розмірів (92, 98, 104, 110, 116, 122, 128).\n"
-        "- discountPercent: якщо згадана знижка — заповнити число, інакше 0.\n"
-        "- audience: female/Вона|male/Він|unisex/Унісекс (обрати один з трьох).\n"
-        f"- Вхідні дані: {input_text}\n"
+    template = prompt_service.get_required_seo_prompt("parse_product_autofill")
+    prompt = prompt_service.render_prompt(
+        template,
+        input_text=input_text,
+        brand=brand,
     )
     resp = client.models.generate_content(
         model=model_name,

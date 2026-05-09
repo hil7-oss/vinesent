@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Integer, ForeignKey, Numeric, Text, Table
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, synonym
 from .database import Base
 
 # Prisma implicit many-to-many table for categories
@@ -46,6 +46,7 @@ class Product(Base):
     stock = Column(Integer, default=0)
     seoTitle = Column(String, nullable=True)
     seoDescription = Column(Text, nullable=True)
+    gender = Column(String, nullable=True)
     categoryId = Column(String, ForeignKey("Category.id"), nullable=True)
     createdAt = Column(String, nullable=True)
     updatedAt = Column(String, nullable=True)
@@ -84,7 +85,11 @@ class User(Base):
     id = Column(String, primary_key=True, index=True)
     email = Column(String, unique=True, nullable=False, index=True)
     password = Column(String, nullable=False)
+    passwordHash = synonym("password")
     name = Column(String, nullable=True)
+    firstName = Column(String, nullable=True)
+    lastName = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
     role = Column(String, nullable=False, default="USER")
     createdAt = Column(String, nullable=True)
     updatedAt = Column(String, nullable=True)

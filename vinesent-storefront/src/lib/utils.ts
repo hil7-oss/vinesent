@@ -33,6 +33,40 @@ export function getAllImages(images: string | null | undefined): string[] {
   }
 }
 
-export function cn(...classes: (string | false | null | undefined)[]): string {
+export function cn(classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(' ')
+}
+
+export function getOptimizedImage(url: string | null | undefined, options: { width?: number; quality?: number; blur?: number } = {}): string {
+  if (!url || typeof url !== 'string') return ''
+  
+  if (url.includes('res.cloudinary.com')) {
+    const { width = 800, quality = 'auto', blur } = options
+    const transformations = [
+      `f_auto`,
+      `q_${quality}`,
+      `c_limit`,
+      width ? `w_${width}` : '',
+      blur ? `e_blur:${blur}` : ''
+    ].filter(Boolean).join(',')
+
+    if (url.includes('/upload/')) {
+      // If there are already transformations (between /upload/ and /v123/ or path), replace them
+      // Otherwise, insert after /upload/
+      const parts = url.split('/upload/')
+      const afterUpload = parts[1]
+      
+      // Check if there's a transformation block before the version/path
+      // Transformations usually don't start with 'v' followed by digits (version) or look like a file path
+      const hasTransform = !afterUpload.startsWith('v') && afterUpload.includes('/')
+      
+      if (hasTransform) {
+        const remaining = afterUpload.split('/').slice(1).join('/')
+        return `${parts[0]}/upload/${transformations}/${remaining}`
+      }
+      return `${parts[0]}/upload/${transformations}/${afterUpload}`
+    }
+  }
+  
+  return url
 }

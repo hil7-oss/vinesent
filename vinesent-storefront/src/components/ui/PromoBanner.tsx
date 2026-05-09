@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { getOptimizedImage } from '@/lib/utils'
 
 interface PromoBannerProps {
   title: string
@@ -46,18 +47,14 @@ export function PromoBanner({
         className={`group block relative w-full aspect-[4/3] sm:aspect-[21/9] lg:aspect-[3/1] rounded-2xl overflow-hidden ${bgClass}`}
         style={bgStyle}
       >
-        {hasRealImage && (isExternal || isLocal) ? (
-          <img
-            src={imageSrc}
-            alt={title}
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-          />
-        ) : hasRealImage ? (
+        {hasRealImage ? (
           <Image 
-            src={imageSrc!} 
+            src={getOptimizedImage(imageSrc, { width: 1200 })} 
             alt={title} 
             fill 
             sizes="100vw"
+            placeholder="blur"
+            blurDataURL={getOptimizedImage(imageSrc, { width: 40, quality: 30, blur: 1000 })}
             className="object-cover transition-transform duration-700 ease-out group-hover:scale-105" 
           />
         ) : null}

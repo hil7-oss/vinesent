@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Montserrat } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
@@ -20,11 +20,6 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "VINESENT | Premium Kids Fashion",
   description: "VINESENT - Premium Kids Fashion. Дитячий одяг преміум класу.",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-  },
   robots: {
     index: true,
     follow: true,
@@ -36,6 +31,12 @@ export const metadata: Metadata = {
   verification: {
     google: "cYmFSjh0fa9EXdnaL4DVYNpJD7FKjbmFbm4Btff19rk",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 

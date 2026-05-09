@@ -8,7 +8,7 @@ type Category = {
   description?: string; parentId?: string; productCount?: number
 }
 
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 
 const formatError = (value: any): string => {
   if (!value) return ''
@@ -82,7 +82,7 @@ function CategoryForm({
               value={form.name}
               onChange={e => {
                 const name = e.target.value
-                setForm((p: any) => ({ ...p, name, slug: autoSlug ? slugify(name) : p.slug }))
+                setForm((p: any) => ({ p, name, slug: autoSlug ? slugify(name) : p.slug }))
               }}
               className={inp}
               placeholder="Наприклад: Дівчатка"
@@ -94,7 +94,7 @@ function CategoryForm({
             <label className="block text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">Батьківська категорія</label>
             <select
               value={form.parentId}
-              onChange={e => setForm((p: any) => ({ ...p, parentId: e.target.value }))}
+              onChange={e => setForm((p: any) => ({ p, parentId: e.target.value }))}
               className={inp + ' appearance-none cursor-pointer'}
             >
               <option value="">— Коренева категорія —</option>
@@ -108,7 +108,7 @@ function CategoryForm({
             <label className="block text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">Slug</label>
             <input
               value={form.slug}
-              onChange={e => { setForm((p: any) => ({ ...p, slug: e.target.value })); setAutoSlug(e.target.value.length === 0) }}
+              onChange={e => { setForm((p: any) => ({ p, slug: e.target.value })); setAutoSlug(e.target.value.length === 0) }}
               className={inp + ' font-mono text-[13px]'}
               placeholder="auto-generated"
             />
@@ -119,7 +119,7 @@ function CategoryForm({
             <label className="block text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">Опис</label>
             <textarea
               value={form.description}
-              onChange={e => setForm((p: any) => ({ ...p, description: e.target.value }))}
+              onChange={e => setForm((p: any) => ({ p, description: e.target.value }))}
               rows={2}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 text-[14px] bg-white outline-none focus:border-gray-800 transition resize-none placeholder:text-gray-300"
               placeholder="Необов'язково"
@@ -131,9 +131,9 @@ function CategoryForm({
             <div className="flex gap-2">
               <input
                 value={form.image}
-                onChange={e => setForm((p: any) => ({ ...p, image: e.target.value }))}
+                onChange={e => setForm((p: any) => ({ p, image: e.target.value }))}
                 className={inp + ' flex-1'}
-                placeholder="https://..."
+                placeholder="https://"
               />
               <label className="h-11 w-11 flex-shrink-0 flex items-center justify-center bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition">
                 <svg className="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
@@ -292,7 +292,7 @@ export default function AdminCategoriesPage() {
 
   const startCreateChild = (parentId: string) => {
     resetForm()
-    setForm(p => ({ ...p, parentId }))
+    setForm(p => ({ p, parentId }))
     setShowForm(true)
   }
 
@@ -303,7 +303,7 @@ export default function AdminCategoriesPage() {
       const res = await fetchApi('/upload', { method: 'POST', body: fd })
       if (!res.ok) throw new Error()
       const data = await res.json()
-      setForm(p => ({ ...p, image: data.url }))
+      setForm(p => ({ p, image: data.url }))
     } catch { setError('Не вдалося завантажити зображення') }
   }
 

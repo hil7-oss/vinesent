@@ -149,7 +149,7 @@ function Orders() {
     <div className="mb-10">
       <h3 className="text-[14px] font-bold uppercase mb-3">Мої покупки</h3>
       {loading ? (
-        <div className="text-[13px] text-gray-400">Завантаження...</div>
+        <div className="text-[13px] text-gray-400">Завантаження</div>
       ) : orders.length === 0 ? (
         <div className="text-[13px] text-gray-400">Замовлень поки немає</div>
       ) : (

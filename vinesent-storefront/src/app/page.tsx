@@ -9,15 +9,15 @@ import { api } from "@/lib/api"
 export const dynamic = 'force-dynamic'
 
 async function getCategories() {
-  const res = await fetch(api('/categories'), { next: { revalidate: 3600 } }).catch(() => null)
+  const res = await fetch(api('/categories'), { cache: 'no-store' }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 async function getAllProducts() {
-  const res = await fetch(api('/products'), { next: { revalidate: 300 } }).catch(() => null)
+  const res = await fetch(api('/products'), { cache: 'no-store' }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 async function getContent() {
-  const res = await fetch(api('/content/home'), { next: { revalidate: 3600 } }).catch(() => null)
+  const res = await fetch(api('/content/home'), { cache: 'no-store' }).catch(() => null)
   return res?.ok ? await res.json() : {}
 }
 
@@ -130,30 +130,19 @@ export default async function Home() {
 
   // ── Promo banners for homepage blocks ───────
   const allBanners: any[] = content?.banners || []
-  const promo1Data = allBanners.find((b: any) => b.position === 'promo1') || null
-  const promo2Data = allBanners.find((b: any) => b.position === 'promo2') || null
-
-  // Defaults if admin hasn't configured yet
-  const promo1 = {
-    title: promo1Data?.title || 'ОБИРАЮТЬ ІДЕАЛЬНЕ',
-    subtitle: promo1Data?.subtitle || 'Преміальна якість для вашої дитини',
-    linkText: promo1Data?.buttonText || 'Переглянути каталог',
-    linkHref: promo1Data?.link || promo1Data?.buttonLink || '/menu',
-    imageSrc: resolveImg(promo1Data?.image, '/globe.svg'),
-    bgColor: promo1Data?.bgColor || 'bg-gray-900',
-    textColor: 'text-white',
-    active: promo1Data ? (promo1Data.active !== false) : true,
-  }
-  const promo2 = {
-    title: promo2Data?.title || 'КОЛЕКЦІЇ',
-    subtitle: promo2Data?.subtitle || 'Зібрані образи спеціально для вас',
-    linkText: promo2Data?.buttonText || 'Переглянути',
-    linkHref: promo2Data?.link || promo2Data?.buttonLink || '/menu',
-    imageSrc: resolveImg(promo2Data?.image, '/window.svg'),
-    bgColor: promo2Data?.bgColor || 'bg-gray-100',
-    textColor: promo2Data?.textColor || 'text-black',
-    active: promo2Data ? (promo2Data.active !== false) : true,
-  }
+  const promoBanners = allBanners.filter((b: any) => b.position?.startsWith('promo') && b.active !== false)
+  
+  // Create promo objects for each banner
+  const promos = promoBanners.map((b: any, idx: number) => ({
+    title: b.title || 'TITLE',
+    subtitle: b.subtitle || '',
+    linkText: b.buttonText || 'Переглянути',
+    linkHref: b.link || b.buttonLink || '/menu',
+    imageSrc: resolveImg(b.image, idx === 0 ? '/globe.svg' : '/window.svg'),
+    bgColor: b.bgColor || (idx === 0 ? 'bg-gray-900' : 'bg-gray-100'),
+    textColor: b.textColor || (idx === 0 ? 'text-white' : 'text-black'),
+    active: b.active !== false,
+  }))
 
   const allProductsMap = new Map((allProducts || []).map((p: any) => [p.id, p]))
   const getCollectionProducts = (key: string) => {
@@ -180,7 +169,7 @@ export default async function Home() {
   )
 
   // 1. Sort by order, then use fallback logic
-  const sortedCategories = [...categories].sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+  const sortedCategories = [...(categories || [])].sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
   
   const seasonSlugs = ['winter', 'spring', 'summer', 'autumn']
   const seasons = seasonSlugs.map(slug => sortedCategories.find((c: any) => c.slug === slug)).filter(Boolean)
@@ -230,16 +219,17 @@ export default async function Home() {
           <ShopLink href="/new" />
         </AnimatedSection>
 
-        {/* ── Promo Banner 1 (from admin, dynamic) ── */}
-        {promo1.active && (
+        {/* ── Promo Banners (dynamic from admin) - First banner after NEW ── */}
+        {promos.length > 0 && promos[0].active && (
           <AnimatedSection delay={0}>
             <PromoBanner
-              title={promo1.title}
-              subtitle={promo1.subtitle}
-              linkText={promo1.linkText}
-              linkHref={promo1.linkHref}
-              imageSrc={promo1.imageSrc}
-              bgColor={promo1.bgColor}
+              title={promos[0].title}
+              subtitle={promos[0].subtitle}
+              linkText={promos[0].linkText}
+              linkHref={promos[0].linkHref}
+              imageSrc={promos[0].imageSrc}
+              bgColor={promos[0].bgColor}
+              textColor={promos[0].textColor}
             />
           </AnimatedSection>
         )}
@@ -351,20 +341,20 @@ export default async function Home() {
           <ShopLink href="/sale" />
         </AnimatedSection>
 
-        {/* ── Promo Banner 2 (from admin, dynamic) ── */}
-        {promo2.active && (
-          <AnimatedSection delay={0}>
+        {/* ── Remaining Promo Banners (after SALE) ── */}
+        {promos.slice(1).map((promo, idx) => promo.active && (
+          <AnimatedSection key={`promo-${idx + 1}`} delay={0}>
             <PromoBanner
-              title={promo2.title}
-              subtitle={promo2.subtitle}
-              linkText={promo2.linkText}
-              linkHref={promo2.linkHref}
-              imageSrc={promo2.imageSrc}
-              bgColor={promo2.bgColor}
-              textColor={promo2.textColor}
+              title={promo.title}
+              subtitle={promo.subtitle}
+              linkText={promo.linkText}
+              linkHref={promo.linkHref}
+              imageSrc={promo.imageSrc}
+              bgColor={promo.bgColor}
+              textColor={promo.textColor}
             />
           </AnimatedSection>
-        )}
+        ))}
 
         {/* ── Extra collections ── */}
         {extraCollections.map((col: any) => {

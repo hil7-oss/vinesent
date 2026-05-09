@@ -40,12 +40,12 @@ export default async function NewPage({ searchParams }: { searchParams: { sort?:
   const sort = String(searchParams?.sort || '').trim().toLowerCase()
   const autoNew = Array.isArray(newByDate) ? newByDate : []
   const curatedIds = new Set(curated.map((p: any) => String(p?.id || '')))
-  const base = curated.length > 0 ? [...curated, ...autoNew.filter((p: any) => !curatedIds.has(String(p?.id || '')))] : autoNew
+  const base = curated.length > 0 ? [curated, autoNew.filter((p: any) => !curatedIds.has(String(p?.id || '')))] : autoNew
   const filtered = sub
     ? base.filter((p: any) => (p.categories || []).some((c: any) => String(c?.slug || '') === sub) || String(p.categoryId || '') === String(categories.find((c: any) => c.slug === sub)?.id || ''))
     : base
   const products = (sort === 'price_asc' || sort === 'price_desc')
-    ? [...filtered].sort((a: any, b: any) => {
+    ? [filtered].sort((a: any, b: any) => {
         const ap = Number(a?.salePrice || 0) > 0 && Number(a?.salePrice) < Number(a?.price || 0) ? Number(a?.salePrice) : Number(a?.price || 0)
         const bp = Number(b?.salePrice || 0) > 0 && Number(b?.salePrice) < Number(b?.price || 0) ? Number(b?.salePrice) : Number(b?.price || 0)
         return sort === 'price_asc' ? ap - bp : bp - ap

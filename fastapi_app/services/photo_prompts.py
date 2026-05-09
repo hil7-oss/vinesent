@@ -3,28 +3,15 @@ Photo prompt builder.
 
 Prompt templates are loaded from data/prompts.json, which is seeded from
 data/default_prompts.json on startup and then edited through the admin UI.
+
+Views (ракурсы) per accent are managed dynamically via the admin UI —
+add, remove, reorder, and label them through the JSON data.
 """
 from __future__ import annotations
 
 from typing import Optional
 
-from .prompt_service import load_custom_photo_prompts, render_prompt
-
-ACCENT_VIEWS = {
-    "top": ["front", "back", "3/4", "full_body", "detail", "casual"],
-    "bottom": ["front", "back", "3/4", "detail", "walking", "casual"],
-    "accessory": ["front", "detail", "in_use", "side", "lifestyle", "styled"],
-    "set": [
-        "full_front",
-        "full_back",
-        "full_3/4",
-        "detail_top",
-        "detail_bottom",
-        "full_casual",
-        "walking",
-        "lifestyle",
-    ],
-}
+from .prompt_service import load_custom_photo_prompts, load_default_photo_prompts, render_prompt
 
 ACCENT_LABELS = {
     "top": "Верх",
@@ -33,25 +20,52 @@ ACCENT_LABELS = {
     "set": "Сет / образ",
 }
 
-VIEW_LABELS = {
-    "front": "Спереду",
-    "back": "Ззаду",
-    "3/4": "3/4 ракурс",
-    "full_body": "Повний зріст",
-    "detail": "Деталі",
-    "casual": "Повсякденний образ",
-    "walking": "Крок",
-    "in_use": "У використанні",
-    "side": "Збоку",
-    "lifestyle": "Lifestyle",
-    "styled": "Стилізований",
-    "full_front": "Повний спереду",
-    "full_back": "Повний ззаду",
-    "full_3/4": "Повний 3/4",
-    "detail_top": "Деталі верху",
-    "detail_bottom": "Деталі низу",
-    "full_casual": "Повсякденний повний",
-}
+
+def get_accent_views(accent: str) -> list[str]:
+    """Get ordered list of view keys for an accent — from JSON only. No hardcoded fallback."""
+    defaults = load_default_photo_prompts().get(accent, {})
+    custom = load_custom_photo_prompts().get(accent, {})
+    if not isinstance(defaults, dict):
+        defaults = {}
+    if not isinstance(custom, dict):
+        custom = {}
+
+    # Union of all non-underscore view keys
+    view_keys: set[str] = set()
+    for data in (defaults, custom):
+        for k in data:
+            if not k.startswith("_"):
+                view_keys.add(k)
+
+    if not view_keys:
+        return []
+
+    # Order: custom _order > default _order > sorted keys
+    order_source = custom.get("_order") or defaults.get("_order") or []
+
+    ordered: list[str] = []
+    seen: set[str] = set()
+    if order_source:
+        for k in order_source:
+            if k in view_keys and k not in seen:
+                ordered.append(k)
+                seen.add(k)
+    for k in sorted(view_keys):
+        if k not in seen:
+            ordered.append(k)
+            seen.add(k)
+    return ordered
+
+
+def get_view_label(accent: str, view: str) -> str:
+    """Get display label for a view from JSON metadata. Falls back to view key only."""
+    for source in (load_custom_photo_prompts, load_default_photo_prompts):
+        data = source().get(accent, {})
+        if isinstance(data, dict):
+            labels = data.get("_labels", {})
+            if isinstance(labels, dict) and view in labels:
+                return str(labels[view])
+    return view
 
 
 def _detect_accent(category: str) -> str:
@@ -155,9 +169,14 @@ def _gender(gender: str, photo: dict) -> str:
 
 def _build_accent_prompts(accent: str, gender: str, category: str, color_hex: str) -> list[dict]:
     photo = load_custom_photo_prompts()
+    defaults = load_default_photo_prompts()
+
     accent_data = photo.get(accent, {})
     if not isinstance(accent_data, dict):
-        return []
+        accent_data = {}
+    default_accent = defaults.get(accent, {})
+    if not isinstance(default_accent, dict):
+        default_accent = {}
 
     context = {
         "item": category or accent,
@@ -167,15 +186,14 @@ def _build_accent_prompts(accent: str, gender: str, category: str, color_hex: st
     }
 
     prompts: list[dict] = []
-    ordered_views = ACCENT_VIEWS.get(accent, list(accent_data.keys()))
-    for view in ordered_views:
-        template = accent_data.get(view)
+    for view in get_accent_views(accent):
+        template = accent_data.get(view) or default_accent.get(view)
         if not template:
             continue
         prompts.append(
             {
                 "view": view,
-                "label": VIEW_LABELS.get(view, view),
+                "label": get_view_label(accent, view),
                 "prompt": render_prompt(str(template), **context),
             }
         )
@@ -198,6 +216,17 @@ def _set_prompts(gender: str, category: str, color_hex: str, custom: dict) -> li
     return _build_accent_prompts("set", gender, category, color_hex)
 
 
+def _valid_accent(accent: str) -> bool:
+    """Check if accent exists in JSON data."""
+    photo = load_custom_photo_prompts()
+    defaults = load_default_photo_prompts()
+    return (
+        accent in photo if isinstance(photo.get(accent), dict) else
+        accent in defaults if isinstance(defaults.get(accent), dict) else
+        False
+    )
+
+
 def build_prompts_for_product(
     category: str = "clothing",
     gender: str = "unisex",
@@ -206,7 +235,7 @@ def build_prompts_for_product(
     image_type: str = "top",
     count: Optional[int] = None,
 ) -> list[dict]:
-    accent = image_type if image_type in ACCENT_VIEWS else _detect_accent(category)
+    accent = image_type if _valid_accent(image_type) else _detect_accent(category)
     prompts = _build_accent_prompts(accent, gender, category, color_hex)
     return prompts[:count] if count is not None else prompts
 

@@ -39,7 +39,7 @@ export default function LiqPayCheckoutPage({ params }: { params: { orderId: stri
     return (
       <div className="max-w-[600px] mx-auto px-4 py-20 text-center">
         <div className="w-20 h-20 bg-gray-100 rounded-full animate-pulse mx-auto mb-6" />
-        <div className="text-[16px] font-bold mb-3">Переадресація на оплату...</div>
+        <div className="text-[16px] font-bold mb-3">Переадресація на оплату</div>
         <div className="text-[13px] text-gray-500">Краще не закривати сторінку</div>
       </div>
     )

@@ -25,7 +25,7 @@ export default function CartPage() {
     try {
       const localCart: Array<{ productId: string; quantity: number; price?: number }> =
         JSON.parse(localStorage.getItem('localCart') || '[]')
-      const prodRes = await fetch(`${API_BASE}/products`)
+      const prodRes = await fetch(`${API_BASE}/products`, { cache: 'no-store' })
       const products = prodRes.ok ? await prodRes.json() : []
       const base: CartItem[] = localCart.map((i, idx) => {
         const p = products.find((x: any) => x.id === i.productId)

@@ -16,7 +16,7 @@ from fastapi_app.config import (
     get_cookie_secure, get_cookie_domain,
 )
 from fastapi_app.models import User
-from ...services.auth_service import (
+from fastapi_app.services.auth_service import (
     hash_password, verify_password, sign_token,
 )
 
@@ -167,7 +167,7 @@ def auth_logout(response: Response):
 
 @router.get("/auth/me")
 def auth_me(request: Request, db: Session = Depends(get_db)):
-    from ..dependencies import get_optional_user
+    from fastapi_app.dependencies import get_optional_user
     jwt_user = get_optional_user(request)
     if not jwt_user:
         return {"user": None}
@@ -185,7 +185,7 @@ def auth_me(request: Request, db: Session = Depends(get_db)):
 
 @router.patch("/auth/me")
 def update_auth_me(payload: dict[str, Any], request: Request, db: Session = Depends(get_db)):
-    from ..dependencies import get_optional_user
+    from fastapi_app.dependencies import get_optional_user
     jwt_user = get_optional_user(request)
     if not jwt_user:
         raise HTTPException(status_code=401, detail="unauthorized")

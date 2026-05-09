@@ -91,14 +91,17 @@ export const promptsApi = {
 
   /** Save custom prompt override for accent/view */
   setPhotoPrompt: (accent: string, view: string, prompt: string) =>
-    req<{ ok: boolean }>(`/photo/${accent}/${view}`, {
+    req<{ ok: boolean }>('/photo/view/set-prompt', {
       method: 'PUT',
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ accent, view, prompt }),
     }),
 
   /** Reset single view to default */
   resetPhotoView: (accent: string, view: string) =>
-    req<{ ok: boolean }>(`/photo/${accent}/${view}`, { method: 'DELETE' }),
+    req<{ ok: boolean }>('/photo/view/reset', {
+      method: 'DELETE',
+      body: JSON.stringify({ accent, view }),
+    }),
 
   /** Reset all views for accent to defaults */
   resetPhotoAccent: (accent: string) =>
@@ -109,6 +112,38 @@ export const promptsApi = {
     req<{ accent: string; view: string; rendered: string }>('/photo/preview', {
       method: 'POST',
       body: JSON.stringify(body),
+    }),
+
+  // ---------------------------------------------------------------------------
+  // View management (add / delete / reorder)
+  // ---------------------------------------------------------------------------
+
+  /** Add a new view (ракурс) to an accent */
+  createPhotoView: (accent: string, view: string, label: string, prompt: string) =>
+    req<{ ok: boolean }>(`/photo/${accent}/views`, {
+      method: 'POST',
+      body: JSON.stringify({ view, label, prompt }),
+    }),
+
+  /** Permanently remove a view from an accent */
+  deletePhotoView: (accent: string, view: string) =>
+    req<{ ok: boolean }>('/photo/view/delete', {
+      method: 'DELETE',
+      body: JSON.stringify({ accent, view }),
+    }),
+
+  /** Update display label for a view */
+  updateViewLabel: (accent: string, view: string, label: string) =>
+    req<{ ok: boolean }>('/photo/view/label', {
+      method: 'PUT',
+      body: JSON.stringify({ accent, view, label }),
+    }),
+
+  /** Reorder views for an accent */
+  reorderViews: (accent: string, views: string[]) =>
+    req<{ ok: boolean }>(`/photo/${accent}/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ views }),
     }),
 
   // ---------------------------------------------------------------------------
@@ -143,5 +178,31 @@ export const promptsApi = {
     req<{ key: string; rendered: string; has_custom: boolean }>('/seo/preview', {
       method: 'POST',
       body: JSON.stringify(body),
+    }),
+
+  // ---------------------------------------------------------------------------
+  // Accent CRUD (create / delete whole accent blocks)
+  // ---------------------------------------------------------------------------
+
+  /** Create a new accent block */
+  createPhotoAccent: (accent: string, label: string) =>
+    req<{ ok: boolean }>(`/photo/${accent}/block`, {
+      method: 'POST',
+      body: JSON.stringify({ accent, label }),
+    }),
+
+  /** Permanently delete an entire accent block */
+  deletePhotoAccent: (accent: string) =>
+    req<{ ok: boolean }>(`/photo/${accent}/block`, { method: 'DELETE' }),
+
+  // ---------------------------------------------------------------------------
+  // Gender blocks
+  // ---------------------------------------------------------------------------
+
+  /** Update gender description blocks */
+  updateGenderBlocks: (blocks: { boy?: string; girl?: string; unisex?: string }) =>
+    req<{ ok: boolean }>('/photo/defaults/gender', {
+      method: 'PUT',
+      body: JSON.stringify(blocks),
     }),
 }

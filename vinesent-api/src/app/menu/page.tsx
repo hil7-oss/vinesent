@@ -63,7 +63,7 @@ export default function MenuPage() {
             return (
               <div key={parent.id} className="border-b border-black/5">
                 <button
-                  onClick={() => setOpen(p => ({ ...p, [parent.id]: !isOpen }))}
+                  onClick={() => setOpen(p => ({ p, [parent.id]: !isOpen }))}
                   className="w-full flex items-center justify-between py-3 hover:pl-2 transition-all"
                 >
                   <span className="text-[14px] lg:text-[15px] font-semibold">{parent.name}</span>

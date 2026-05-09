@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from fastapi_app.config import CONTENT_PATH, LEGACY_CONTENT_PATH
 from fastapi_app.database import get_db
 from fastapi_app.dependencies import require_admin
-from ...core.storage import read_json, write_json
+from fastapi_app.core.storage import read_json, write_json
 from fastapi_app.schemas import ContentData, Banner, BannerUpdate, CollectionUpdate
 
 router = APIRouter(tags=["content"])
@@ -61,7 +61,7 @@ def update_content(payload: dict[str, Any], user: dict = Depends(require_admin))
     data = _read_content()
     allowed = {"banners", "promoBanners", "collections", "navigation"}
     for key, value in payload.items():
-        if key in allowed:
+        if key in allowed or key.startswith("extra_"):
             data[key] = value
     return _write_content(data)
 
@@ -127,7 +127,7 @@ def delete_banner(banner_id: str, user: dict = Depends(require_admin)):
 
 @router.patch("/content/banners/reorder", response_model=ContentData)
 def reorder_banners(payload: dict[str, Any], user: dict = Depends(require_admin)):
-    """payload: {"ids": ["id1", "id2", ...]}"""
+    """payload: {"ids": ["id1", "id2", ]}"""
     ids: list[str] = payload.get("ids") or []
     data = _read_content()
     banners = data.get("banners", [])
@@ -169,8 +169,8 @@ def create_promo_banner(payload: dict[str, Any], user: dict = Depends(require_ad
     return _write_content(data)
 
 
-@router.put("/promo-banners/{banner_id}", response_model=ContentData)
-@router.put("/content/promo-banners/{banner_id}", response_model=ContentData)
+@router.patch("/promo-banners/{banner_id}", response_model=ContentData)
+@router.patch("/content/promo-banners/{banner_id}", response_model=ContentData)
 def update_promo_banner(banner_id: str, payload: dict[str, Any], user: dict = Depends(require_admin)):
     data = _read_content()
     promo: list = data.get("promoBanners", [])

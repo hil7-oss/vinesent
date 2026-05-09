@@ -65,7 +65,7 @@ export default function ResultPage({ params }: { params: { orderId: string } }) 
     return (
       <div className="max-w-[600px] mx-auto px-4 py-20 text-center">
         <div className="w-20 h-20 bg-gray-100 rounded-full animate-pulse mx-auto mb-6" />
-        <div className="text-[16px] font-bold mb-3">Перевіряємо статус оплати...</div>
+        <div className="text-[16px] font-bold mb-3">Перевіряємо статус оплати</div>
       </div>
     )
   }
@@ -79,7 +79,7 @@ export default function ResultPage({ params }: { params: { orderId: string } }) 
         )}
       </div>
       <h1 className="text-[24px] font-bold uppercase mb-3" style={{ fontFamily: 'var(--font-brand)' }}>{ok ? 'Дякуємо!' : 'Оплата не виконана'}</h1>
-      <p className="text-[16px] text-gray-600 mb-2">{ok ? 'Замовлення успішно оплачене' : (polling ? 'Очікуємо підтвердження платежу...' : 'Оплата не пройшла або скасована')}</p>
+      <p className="text-[16px] text-gray-600 mb-2">{ok ? 'Замовлення успішно оплачене' : (polling ? 'Очікуємо підтвердження платежу' : 'Оплата не пройшла або скасована')}</p>
       <p className="text-[13px] text-gray-400 mb-6">Замовлення № {order?.id}</p>
       <div className="flex items-center justify-center gap-3">
         <Link href="/" onClick={() => { if (ok) clearCart() }} className="inline-block bg-[#111] text-white text-[13px] font-semibold uppercase px-8 py-3 rounded-full hover:bg-black/80 transition">

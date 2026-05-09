@@ -94,10 +94,21 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: '/admin/prompts',
+    label: 'Промти',
+    shortLabel: 'AI',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        <path d="M8 9h8m-8 4h6"/>
+      </svg>
+    ),
+  },
 ]
 
 // Items shown in mobile bottom bar (most important 5)
-const mobileNavItems = navItems.filter(i => ['/admin', '/admin/products', '/admin/orders', '/admin/content', '/admin/pos'].includes(i.href))
+const mobileNavItems = navItems.filter(i => ['/admin', '/admin/products', '/admin/orders', '/admin/content', '/admin/prompts'].includes(i.href))
 
 export default function AdminSidebar() {
   const pathname = usePathname()

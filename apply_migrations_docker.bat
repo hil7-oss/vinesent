@@ -2,7 +2,7 @@
 REM Apply database migrations through Docker (Windows)
 
 echo ==================================================
-echo Applying database migrations...
+echo Applying database migrations
 echo ==================================================
 
 REM Check if Docker is running

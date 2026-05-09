@@ -11,7 +11,7 @@ export default function MenuPage() {
   const [open, setOpen] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    fetch(`${API_BASE}/categories`).then(r => r.json()).then(setCategories).catch(() => []).finally(() => setLoading(false))
+    fetch(`${API_BASE}/categories`, { cache: 'no-store' }).then(r => r.json()).then(setCategories).catch(() => []).finally(() => setLoading(false))
   }, [])
 
   const menuLinks = [

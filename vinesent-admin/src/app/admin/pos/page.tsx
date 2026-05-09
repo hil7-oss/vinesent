@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 
 export const dynamic = 'force-dynamic'
 
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 
 export default function PosPage() {
   const [barcode, setBarcode] = useState('')
@@ -25,14 +25,14 @@ export default function PosPage() {
     setMessage('')
     try {
       // First lookup
-      const res = await fetch(`${API_BASE}/api/v1/barcodes/lookup?barcode=${barcode}`)
+      const res = await fetch(`/barcodes/lookup?barcode=${barcode}`)
       const data = await res.json()
       
       if (res.ok) {
         setScannedItem(data)
         // Auto-sell (Quick Sale) logic or just show?
         // Let's implement Quick Sale on Enter for now, but ask for confirmation or quantity.
-        // Actually, user said "удаление ... за счет сканирование", implies fast action.
+        // Actually, user said "удаление  за счет сканирование", implies fast action.
         // Let's do: Scan -> Show -> Click "Sell" or Scan again to sell immediately if "Auto-Sell" is checked.
       } else {
         setMessage('Товар не знайдено')
@@ -49,7 +49,7 @@ export default function PosPage() {
     if (!scannedItem) return
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/v1/pos/simple-sale`, {
+      const res = await fetch(`/pos/simple-sale`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ barcode: scannedItem.barcode, quantity: qty })
@@ -57,7 +57,7 @@ export default function PosPage() {
       const data = await res.json()
       if (res.ok) {
         setMessage(`Продано! Залишок: ${data.variant.stock}`)
-        setScannedItem({ ...scannedItem, stock: data.variant.stock })
+        setScannedItem({ scannedItem, stock: data.variant.stock })
         setBarcode('')
         inputRef.current?.focus()
       } else {
@@ -83,7 +83,7 @@ export default function PosPage() {
 
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/v1/inventory/adjust`, {
+      const res = await fetch(`/inventory/adjust`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ barcode: scannedItem.barcode, newStock })
@@ -91,7 +91,7 @@ export default function PosPage() {
       const data = await res.json()
       if (res.ok) {
         setMessage(`Оновлено! Новий залишок: ${data.variant.stock}`)
-        setScannedItem({ ...scannedItem, stock: data.variant.stock })
+        setScannedItem({ scannedItem, stock: data.variant.stock })
       } else {
         setMessage(`Помилка: ${data.error}`)
       }
@@ -112,7 +112,7 @@ export default function PosPage() {
           type="text"
           value={barcode}
           onChange={e => setBarcode(e.target.value)}
-          placeholder="Скануйте штрихкод..."
+          placeholder="Скануйте штрихкод"
           className="w-full h-16 px-6 text-xl border-2 border-black rounded-xl focus:outline-none focus:ring-4 focus:ring-black/10"
           autoFocus
         />

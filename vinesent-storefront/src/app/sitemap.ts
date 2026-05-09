@@ -19,7 +19,7 @@ interface SitemapData {
 async function getSitemapData(): Promise<SitemapData> {
   try {
     const res = await fetch(`${API_URL}/sitemap-data`, {
-      next: { revalidate: 3600 }
+      cache: 'no-store'
     })
     if (!res.ok) return { products: [], categories: [] }
     return await res.json()

@@ -12,7 +12,7 @@ if [ ! -f "$BACKUP" ]; then
   exit 0
 fi
 
-echo "[init] Restoring production data from backup..."
+echo "[init] Restoring production data from backup"
 
 # Feed only the vinesent DB section, skip role/database DDL that already exists
 # Strategy: filter lines that would conflict, then use psql as vinesent user

@@ -16,7 +16,7 @@ from sqlalchemy import text
 from fastapi_app.database import get_db
 from fastapi_app.dependencies import require_admin
 from fastapi_app.config import MAX_UPLOAD_BYTES
-from ...utils.images import (
+from fastapi_app.utils.images import (
     parse_product_images,
     serialize_product_images,
     add_product_image,
@@ -40,7 +40,7 @@ def get_product_images(product_id: str, db: Session = Depends(get_db)):
         {
             "images": [
                 {
-                    "url": "...",
+                    "url": "",
                     "type": "front",
                     "order": 0,
                     "isGenerated": false
@@ -66,7 +66,7 @@ def get_product_images(product_id: str, db: Session = Depends(get_db)):
 @router.post("/{product_id}/images")
 async def upload_product_image(
     product_id: str,
-    file: UploadFile = File(...),
+    file: UploadFile = File(),
     type: str = Form("additional"),  # front, back, side, additional
     db: Session = Depends(get_db),
     user: dict = Depends(require_admin)
@@ -142,7 +142,7 @@ async def upload_product_image(
     
     # Upload to Cloudinary
     try:
-        from ...services.cloudinary_service import upload_image
+        from fastapi_app.services.cloudinary_service import upload_image
         
         image_bytes = await file.read()
         
@@ -255,7 +255,7 @@ def delete_product_image(
     # Try to delete from Cloudinary if it's a Cloudinary URL
     if "cloudinary.com" in url:
         try:
-            from ...services.cloudinary_service import delete_image
+            from fastapi_app.services.cloudinary_service import delete_image
             # Extract public_id from URL
             # Format: https://res.cloudinary.com/{cloud_name}/image/upload/v{version}/{public_id}.{format}
             parts = url.split("/upload/")
@@ -285,7 +285,7 @@ def get_product_images_by_type(
         
     Returns:
         {
-            "images": [...]
+            "images": []
         }
     """
     valid_types = ["front", "back", "side", "additional"]

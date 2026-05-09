@@ -5,17 +5,17 @@ import ProductCard from '@/components/product/ProductCard'
 export const dynamic = 'force-dynamic'
 
 async function getCategories() {
-  const res = await fetch(api('/categories'), { next: { revalidate: 3600 } }).catch(() => null)
+  const res = await fetch(api('/categories'), { cache: 'no-store' }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 
 async function getContent() {
-  const res = await fetch(api('/content'), { next: { revalidate: 3600 } }).catch(() => null)
+  const res = await fetch(api('/content'), { cache: 'no-store' }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 
 async function getAllProducts() {
-  const res = await fetch(api('/products'), { next: { revalidate: 300 } }).catch(() => null)
+  const res = await fetch(api('/products'), { cache: 'no-store' }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 
@@ -24,7 +24,7 @@ async function getNewProducts(sub?: string, sort?: string) {
   qs.set('new', 'true')
   if (sub) qs.set('sub', sub)
   if (sort) qs.set('sort', sort)
-  const res = await fetch(api(`/products?${qs.toString()}`), { next: { revalidate: 300 } }).catch(() => null)
+  const res = await fetch(api(`/products?${qs.toString()}`), { cache: 'no-store' }).catch(() => null)
   return res?.ok ? await res.json() : []
 }
 
@@ -42,12 +42,12 @@ export default async function NewPage({ searchParams }: { searchParams: { sort?:
   const sort = String(searchParams?.sort || '').trim().toLowerCase()
   const autoNew = Array.isArray(newByDate) ? newByDate : []
   const curatedIds = new Set(curated.map((p: any) => String(p?.id || '')))
-  const base = curated.length > 0 ? [...curated, ...autoNew.filter((p: any) => !curatedIds.has(String(p?.id || '')))] : autoNew
+  const base = curated.length > 0 ? [curated, autoNew.filter((p: any) => !curatedIds.has(String(p?.id || '')))] : autoNew
   const filtered = sub
     ? base.filter((p: any) => (p.categories || []).some((c: any) => String(c?.slug || '') === sub) || String(p.categoryId || '') === String(categories.find((c: any) => c.slug === sub)?.id || ''))
     : base
   const products = (sort === 'price_asc' || sort === 'price_desc')
-    ? [...filtered].sort((a: any, b: any) => {
+    ? [filtered].sort((a: any, b: any) => {
         const ap = Number(a?.salePrice || 0) > 0 && Number(a?.salePrice) < Number(a?.price || 0) ? Number(a?.salePrice) : Number(a?.price || 0)
         const bp = Number(b?.salePrice || 0) > 0 && Number(b?.salePrice) < Number(b?.price || 0) ? Number(b?.salePrice) : Number(b?.price || 0)
         return sort === 'price_asc' ? ap - bp : bp - ap
@@ -64,13 +64,13 @@ export default async function NewPage({ searchParams }: { searchParams: { sort?:
         
         <div className="flex items-center gap-2">
           <Link 
-            href={`/new?${new URLSearchParams({...searchParams, sort: 'price_asc'}).toString()}`}
+            href={`/new?${new URLSearchParams({ ...searchParams, sort: 'price_asc' }).toString()}`}
             className={`h-9 px-4 flex items-center justify-center border text-[11px] font-medium uppercase tracking-[0.1em] transition-all rounded-[2px] ${searchParams?.sort === 'price_asc' ? 'bg-black text-white border-black' : 'bg-transparent text-black border-[#E5E5E5] hover:border-black'}`}
           >
             Ціна ↑
           </Link>
           <Link 
-            href={`/new?${new URLSearchParams({...searchParams, sort: 'price_desc'}).toString()}`}
+            href={`/new?${new URLSearchParams({ ...searchParams, sort: 'price_desc' }).toString()}`}
             className={`h-9 px-4 flex items-center justify-center border text-[11px] font-medium uppercase tracking-[0.1em] transition-all rounded-[2px] ${searchParams?.sort === 'price_desc' ? 'bg-black text-white border-black' : 'bg-transparent text-black border-[#E5E5E5] hover:border-black'}`}
           >
             Ціна ↓

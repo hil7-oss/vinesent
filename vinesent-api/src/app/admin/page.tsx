@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 
 type Stats = {
   products: number; categories: number; orders: number; revenue: number;
@@ -153,7 +153,7 @@ export default function AdminPage() {
       })
 
       setStats({ products: products.length, categories: categories.length, orders: orders.length, revenue, inventoryCost, potentialRevenue, potentialProfit: potentialRevenue - inventoryCost, todayCashRevenue, lowStockCount, noImageCount })
-      setTopCategories([...categories].sort((a: any, b: any) => Number(b.productCount || 0) - Number(a.productCount || 0)).slice(0, 6))
+      setTopCategories([categories].sort((a: any, b: any) => Number(b.productCount || 0) - Number(a.productCount || 0)).slice(0, 6))
 
       const slides = (content?.banners || []).filter((b: any) => b.position === 'hero')
       setHeroSlides(slides.length
@@ -172,15 +172,15 @@ export default function AdminPage() {
 
   const saveHeroSlides = async () => {
     setSavingContent(true)
-    await fetch(`${API_BASE}/content/hero-slides`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(heroSlides.map(s => ({ ...s, position: 'hero' }))) })
+    await fetch(`${API_BASE}/content/hero-slides`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(heroSlides.map(s => ({ s, position: 'hero' }))) })
     setSavingContent(false)
   }
 
   const updateSlide = (id: string, patch: Partial<HeroSlide>) =>
-    setHeroSlides(p => p.map(s => s.id === id ? { ...s, ...patch } : s))
+    setHeroSlides(p => p.map(s => s.id === id ? { s, patch } : s))
   const addSlide = () => {
     const id = crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`
-    setHeroSlides(p => [...p, { id, title: '', subtitle: '', image: '', link: '', active: true }])
+    setHeroSlides(p => [p, { id, title: '', subtitle: '', image: '', link: '', active: true }])
   }
   const removeSlide = (id: string) => setHeroSlides(p => p.filter(s => s.id !== id))
   const uploadHeroImage = async (slideId: string, file: File | null) => {
@@ -192,7 +192,7 @@ export default function AdminPage() {
   }
 
   const updateCollectionField = (id: string, patch: Partial<AdminCollection>) =>
-    setCollections(p => p.map(c => c.id === id ? { ...c, ...patch } : c))
+    setCollections(p => p.map(c => c.id === id ? { c, patch } : c))
   const saveCollection = async (col: AdminCollection) => {
     setSavingContent(true)
     await fetch(`${API_BASE}/content/collections/${col.key}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: col.title, description: col.description, productIds: col.productIds.split(',').map(v => v.trim()).filter(Boolean) }) })
@@ -202,7 +202,7 @@ export default function AdminPage() {
     const key = newCollectionKey.trim().toUpperCase(); if (!key) return
     setSavingContent(true)
     const res = await fetch(`${API_BASE}/content/collections`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key, title: key, description: '', productIds: [] }) })
-    if (res.ok) { setCollections(p => [...p, { id: `${Date.now()}`, key, title: key, description: '', productIds: '' }]); setNewCollectionKey('') }
+    if (res.ok) { setCollections(p => [p, { id: `${Date.now()}`, key, title: key, description: '', productIds: '' }]); setNewCollectionKey('') }
     setSavingContent(false)
   }
   const removeCollection = async (key: string) => {
@@ -329,7 +329,7 @@ export default function AdminPage() {
                   </div>
                   <button onClick={saveHeroSlides} disabled={savingContent}
                     className="w-full h-10 rounded-xl bg-gray-950 text-white text-[13px] font-medium disabled:opacity-50 hover:bg-gray-800 transition">
-                    {savingContent ? 'Збереження...' : 'Зберегти банер'}
+                    {savingContent ? 'Збереження' : 'Зберегти банер'}
                   </button>
                 </div>
 
@@ -339,7 +339,7 @@ export default function AdminPage() {
                   <div className="flex gap-2">
                     <input value={newCollectionKey} onChange={e => setNewCollectionKey(e.target.value.toUpperCase())}
                       className="flex-1 h-9 px-3 rounded-xl border border-gray-200 text-[12px] outline-none focus:border-gray-400 transition"
-                      placeholder="NEW, SALE, WINTER..." />
+                      placeholder="NEW, SALE, WINTER" />
                     <button onClick={addCollection} disabled={savingContent}
                       className="h-9 px-4 rounded-xl border border-gray-200 text-[12px] font-medium hover:bg-gray-50 disabled:opacity-50 transition">
                       Додати
@@ -364,7 +364,7 @@ export default function AdminPage() {
                           <span className="text-[10px] text-gray-400">{col.productIds.split(',').map(v => v.trim()).filter(Boolean).length} товарів</span>
                           <button onClick={() => saveCollection(col)} disabled={savingContent}
                             className="h-7 px-3 rounded-lg bg-gray-950 text-white text-[11px] font-medium disabled:opacity-50 hover:bg-gray-800 transition">
-                            {savingContent ? '...' : 'Зберегти'}
+                            {savingContent ? '' : 'Зберегти'}
                           </button>
                         </div>
                       </div>

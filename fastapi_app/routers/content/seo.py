@@ -6,7 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from fastapi_app.database import get_db
-from ...core.cache import cache_get, cache_set
+from fastapi_app.core.cache import cache_get, cache_set
 
 router = APIRouter(tags=["seo"])
 

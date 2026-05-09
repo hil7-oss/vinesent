@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 async function getRedirectPath(productId: string): Promise<string | null> {
   try {
-    const res = await fetch(api(`/products/${productId}`), { next: { revalidate: 300 } })
+    const res = await fetch(api(`/products/${productId}`), { cache: 'no-store' })
     if (!res.ok) return null
     const product = await res.json()
     if (!product?.slug) return null

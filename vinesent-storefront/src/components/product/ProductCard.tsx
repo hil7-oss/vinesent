@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import Image from 'next/image'
-import { formatPrice, getFirstImage } from '@/lib/utils'
+import { formatPrice, getFirstImage, getOptimizedImage } from '@/lib/utils'
 import { useState, useMemo } from 'react'
 
 type Product = {
@@ -18,28 +18,11 @@ type Product = {
 export default function ProductCard({ product, badges }: { product: Product; showSale?: boolean; badges?: string[] }) {
   const [fav, setFav] = useState(false)
   const rawImg = getFirstImage(product.images)
-  const img = useMemo(() => {
-    if (!rawImg || typeof rawImg !== 'string') return ''
-    if (rawImg.startsWith('http')) {
-      // Cloudinary optimization — only if not already applied
-      if (rawImg.includes('res.cloudinary.com') && rawImg.includes('/upload/')) {
-        if (!rawImg.includes('/upload/f_auto')) {
-          return rawImg.replace('/upload/', '/upload/f_auto,q_auto,w_800,c_limit/')
-        }
-      }
-      return rawImg
-    }
-    // Keep site-relative for SSR; runtime will resolve to site domain
-    return rawImg
-  }, [rawImg])
+  const img = useMemo(() => getOptimizedImage(rawImg, { width: 800 }), [rawImg])
   const placeholder = useMemo(() => {
     if (!img) return ''
-    // If Cloudinary, request lightweight transformed preview
-    if (img.includes('res.cloudinary.com') && img.includes('/upload/')) {
-      if (!img.includes('/upload/f_auto') && !img.includes('/upload/q_30')) {
-        return img.replace('/upload/', '/upload/f_auto,q_30,w_480,c_limit/')
-      }
-      return img
+    if (img.includes('res.cloudinary.com')) {
+      return getOptimizedImage(img, { width: 40, quality: 30, blur: 1000 })
     }
     // Local uploads: use backend-generated LQIP path
     if (typeof img === 'string' && img.startsWith('/uploads/')) {
@@ -88,28 +71,16 @@ export default function ProductCard({ product, badges }: { product: Product; sho
     <Link href={productLink} className="group relative flex flex-col">
       <div className="relative w-full aspect-[2/3] bg-[#f5f5f5] overflow-hidden rounded-sm">
         {img ? (
-          <>
-            <img
-              src={placeholder}
-              alt={`${product.name} - VINESENT преміум дитячий одяг`}
-              title={product.name}
-              className="w-full h-full object-cover scale-[1.005]"
-              loading="lazy"
-              decoding="async"
-              onError={(e) => {
-                // Avoid broken-image icon if placeholder generation fails
-                ;(e.currentTarget as HTMLImageElement).style.display = 'none'
-              }}
-            />
-            <Image
-              src={img}
-              alt={`${product.name} - VINESENT преміум дитячий одяг`}
-              title={product.name}
-              fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              className="object-cover scale-[1.005] transition-transform duration-700 ease-out md:group-hover:scale-[1.04]"
-            />
-          </>
+          <Image
+            src={img}
+            alt={`${product.name} - VINESENT преміум дитячий одяг`}
+            title={product.name}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            placeholder="blur"
+            blurDataURL={placeholder}
+            className="object-cover scale-[1.005] transition-transform duration-700 ease-out md:group-hover:scale-[1.04]"
+          />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
             <svg className="w-10 h-10 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" aria-label="Зображення відсутнє">

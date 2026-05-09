@@ -5,12 +5,10 @@ import ProductClientPage from './ProductClient'
 
 export const dynamic = 'force-dynamic'
 
-export const revalidate = 300
-
 // ─── Server-side product fetch ────────────────────────────────────────────────
 async function fetchProductBySlug(slug: string) {
   try {
-    const res = await fetch(api('/products'), { next: { revalidate: 300 } })
+    const res = await fetch(api('/products'), { cache: 'no-store' })
     if (!res.ok) return null
     const products = await res.json()
     if (!Array.isArray(products)) return null
@@ -159,7 +157,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
 
 async function fetchAllProducts() {
   try {
-    const res = await fetch(api('/products'), { next: { revalidate: 300 } })
+    const res = await fetch(api('/products'), { cache: 'no-store' })
     if (!res.ok) return []
     return await res.json()
   } catch {

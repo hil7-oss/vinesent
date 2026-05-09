@@ -7,7 +7,7 @@ import { ProductForm, Product, Category, SIZE_OPTIONS, COLOR_OPTIONS, Variant } 
 
 export const dynamic = 'force-dynamic'
 
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 
 const formatError = (err: any): string => {
   if (!err) return ''
@@ -245,7 +245,7 @@ function BulkActions({ selectedIds, products, onClear, onSuccess, categories }: 
       let newSalePrice: number | null = null
       if (value.endsWith('%')) { const p = parseFloat(value); if (!isNaN(p)) newSalePrice = Math.round(product.price * (1 - p / 100)) }
       else { const v = parseFloat(value); if (!isNaN(v)) newSalePrice = v }
-      return fetch(`${API_BASE}/api/v1/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ salePrice: newSalePrice }) })
+      return fetch(`/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ salePrice: newSalePrice }) })
     }))
     setSaving(false); setMode(null); onClear(); onSuccess()
   }
@@ -260,7 +260,7 @@ function BulkActions({ selectedIds, products, onClear, onSuccess, categories }: 
       if (action === 'set') newCats = catIds
       else if (action === 'add') newCats = [...new Set([...newCats, ...catIds])]
       else if (action === 'remove') newCats = newCats.filter(c => !catIds.includes(c))
-      return fetch(`${API_BASE}/api/v1/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ categoryIds: newCats, categoryId: newCats[0] || null }) })
+      return fetch(`/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ categoryIds: newCats, categoryId: newCats[0] || null }) })
     }))
     setSaving(false); setMode(null); onClear(); onSuccess(); setCatIds([])
   }
@@ -275,7 +275,7 @@ function BulkActions({ selectedIds, products, onClear, onSuccess, categories }: 
         <div className="flex items-center gap-3">
           <button onClick={() => setMode('discount')} className="text-[12px] hover:text-gray-300 transition">Знижка</button>
           <button onClick={() => setMode('category')} className="text-[12px] hover:text-gray-300 transition">Категорія</button>
-          <button onClick={async () => { if (confirm(`Видалити ${selectedIds.length} товарів?`)) { await Promise.all(selectedIds.map(id => fetch(`${API_BASE}/api/v1/products/${id}`, { method: 'DELETE' }))); onClear(); onSuccess() } }} className="text-[12px] text-red-400 hover:text-red-300 transition">Видалити</button>
+          <button onClick={async () => { if (confirm(`Видалити ${selectedIds.length} товарів?`)) { await Promise.all(selectedIds.map(id => fetch(`/products/${id}`, { method: 'DELETE' }))); onClear(); onSuccess() } }} className="text-[12px] text-red-400 hover:text-red-300 transition">Видалити</button>
         </div>
         <button onClick={onClear} className="w-5 h-5 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-[10px] transition">✕</button>
       </div>
@@ -333,9 +333,9 @@ export default function AdminProductsPage() {
 
   const fetchData = useCallback(async () => {
     const [prodRes, catRes, varRes] = await Promise.all([
-      fetch(`${API_BASE}/api/v1/products?includeOutOfStock=true`).then(r => r.ok ? r.json() : []),
-      fetch(`${API_BASE}/api/v1/categories`).then(r => r.ok ? r.json() : []),
-      fetch(`${API_BASE}/api/v1/variants`).then(r => r.ok ? r.json() : []),
+      fetch(`/products?includeOutOfStock=true`).then(r => r.ok ? r.json() : []),
+      fetch(`/categories`).then(r => r.ok ? r.json() : []),
+      fetch(`/variants`).then(r => r.ok ? r.json() : []),
     ])
     setProducts(prodRes); setViewProducts(prodRes); setCategories(catRes)
     const map: Record<string, Variant[]> = {}
@@ -354,10 +354,10 @@ export default function AdminProductsPage() {
     const cat = categories.find(c => c.id === selectedCategory)
     const slug = (cat?.slug || '').toLowerCase()
     if (slug === 'new') {
-      ;(async () => { const res = await fetch(`${API_BASE}/api/v1/products?new=true&includeOutOfStock=true`); setViewProducts(res.ok ? await res.json() : []) })()
+      ;(async () => { const res = await fetch(`/products?new=true&includeOutOfStock=true`); setViewProducts(res.ok ? await res.json() : []) })()
     } else if (slug === 'sale') {
       ;(async () => {
-        const res = await fetch(`${API_BASE}/api/v1/products?sale=true&includeOutOfStock=true`)
+        const res = await fetch(`/products?sale=true&includeOutOfStock=true`)
         const list = res.ok ? await res.json() : []
         setViewProducts((Array.isArray(list) ? list : []).filter((p: any) => (Number(p?.salePrice || 0) > 0) && (Number(p?.price || 0) <= 0 || Number(p.salePrice) < Number(p.price))))
       })()
@@ -389,12 +389,12 @@ export default function AdminProductsPage() {
   const toggleSelect = (id: string) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   const selectAll = () => setSelectedIds(selectedIds.length === filtered.length ? [] : filtered.map(p => p.id))
   const quickUpdate = async (id: string, data: Partial<Product>) => {
-    await fetch(`${API_BASE}/api/v1/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+    await fetch(`/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
     fetchData()
   }
   const deleteProduct = async (id: string) => {
     if (!confirm('Видалити товар?')) return
-    await fetch(`${API_BASE}/api/v1/products/${id}`, { method: 'DELETE' })
+    await fetch(`/products/${id}`, { method: 'DELETE' })
     fetchData()
   }
 

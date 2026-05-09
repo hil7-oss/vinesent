@@ -20,7 +20,8 @@ function validateInternalUrl(name: string, value: string) {
 function validatePublicUrl(name: string, value: string) {
   const v = value.trim()
   if (!v) return v
-  if (isProd && !v.startsWith('https://')) console.warn(`Warning: ${name} should be https in production`)
+  const isLocalHttp = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(v)
+  if (isProd && !v.startsWith('https://') && !isLocalHttp) console.warn(`Warning: ${name} should be https in production`)
   if (v.includes('@')) throw new Error(`${name} must not include credentials`)
   if (v.includes('?') || v.includes('#')) throw new Error(`${name} must not include query or fragment`)
   return v

@@ -31,7 +31,7 @@ export default function SearchPage() {
             onChange={e => setQ(e.target.value)}
             autoFocus
             className="w-full h-12 pl-12 pr-4 rounded-xl border border-black/15 text-[14px] outline-none focus:border-black/40 transition"
-            placeholder="Пошук товарів..."
+            placeholder="Пошук товарів"
           />
           {q && (
             <button onClick={() => setQ('')} className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 hover:text-black">

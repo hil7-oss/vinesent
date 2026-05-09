@@ -113,10 +113,12 @@ function getProductImg(p: Product): string {
 
 function resolveImg(src: string | null | undefined) {
   if (!src) return ''
+  if (typeof src !== 'string') return ''
   if (src.startsWith('http')) return src
   if (src.startsWith('/uploads/')) return `${API_BASE}${src}`
   if (src.startsWith('uploads/')) return `${API_BASE}/${src}`
-  return src
+  if (src.includes('/') || src.includes('.')) return src
+  return ''
 }
 
 // ── Image Upload Widget ───────────────────────
@@ -175,7 +177,7 @@ function ImageUpload({ value, onChange, label }: { value: string; onChange: (url
             disabled={uploading}
             className="mt-2 h-8 px-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-[12px] font-medium transition disabled:opacity-50"
           >
-            {uploading ? 'Завантаження...' : 'Завантажити файл...'}
+            {uploading ? 'Завантаження' : 'Завантажити файл'}
           </button>
         </div>
       </div>
@@ -218,12 +220,19 @@ function HeroTab({ banners, onSave, saving, isPromo }: {
   const remove = (idx: number) => setSlides(prev => prev.filter((_, i) => i !== idx))
   const update = (idx: number, key: keyof Banner, val: any) =>
     setSlides(prev => prev.map((s, i) => i === idx ? { ...s, [key]: val } : s))
+  
+  // Auto-increment position for promo banners
+  useEffect(() => {
+    if (isPromo && slides.length > 0) {
+      setSlides(prev => prev.map((s, i) => ({ ...s, position: `promo${i + 1}` })))
+    }
+  }, [isPromo, slides.length])
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <p className="text-[13px] text-gray-500">{isPromo ? 'Баннери для блоків на головній сторінці.' : 'Слайди героя на головній сторінці.'}</p>
-        <button onClick={addSlide} className="h-9 px-4 rounded-xl bg-black text-white text-[13px] font-medium">+ Додати</button>
+        <button type="button" onClick={addSlide} className="h-9 px-4 rounded-xl bg-black text-white text-[13px] font-medium">+ Додати</button>
       </div>
       {slides.length === 0 && <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center text-gray-400">Пусто</div>}
       {slides.map((slide, idx) => (
@@ -235,7 +244,7 @@ function HeroTab({ banners, onSave, saving, isPromo }: {
                 <input type="checkbox" checked={!!slide.active} onChange={e => update(idx, 'active', e.target.checked)} className="accent-black" />
                 Активний
               </label>
-              <button onClick={() => remove(idx)} className="text-[12px] text-red-400 hover:text-red-600">Видалити</button>
+              <button type="button" onClick={() => remove(idx)} className="text-[12px] text-red-400 hover:text-red-600">Видалити</button>
             </div>
           </div>
           <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -258,8 +267,8 @@ function HeroTab({ banners, onSave, saving, isPromo }: {
         </div>
       ))}
       {slides.length > 0 && (
-        <button onClick={() => onSave(slides)} disabled={saving} className="h-11 px-6 rounded-xl bg-black text-white text-[14px] font-bold disabled:opacity-50">
-          Зберегти зміни
+        <button type="button" onClick={() => onSave(slides)} disabled={saving} className="h-11 px-6 rounded-xl bg-black text-white text-[14px] font-bold disabled:opacity-50">
+          {saving ? 'Збереження...' : 'Зберегти зміни'}
         </button>
       )}
     </div>
@@ -306,7 +315,7 @@ function CategoriesTab({ categories, onUpdate, saving }: {
         <div className="relative flex-1 max-w-xs">
           <input 
             value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Пошук категорії..."
+            placeholder="Пошук категорії"
             className="w-full h-9 px-3 rounded-xl border border-gray-200 text-[13px] outline-none"
           />
         </div>
@@ -334,6 +343,7 @@ function CategoriesTab({ categories, onUpdate, saving }: {
               <div className="text-[11px] font-mono text-gray-400 mt-0.5">slug: {c.slug}</div>
               <div className="mt-3">
                 <button 
+                  type="button"
                   onClick={() => { const n = prompt('Нова назва:', c.name); if(n) onUpdate(c.id, { name: n }) }} 
                   className="text-[11px] text-blue-500 hover:underline"
                 >
@@ -392,6 +402,59 @@ function CollectionsTab({ content, products, onUpdate, saving }: {
 }
 
 // ── Tab: Extra Collections ────────────────────
+function ExtraCollectionCard({ collectionKey, collection, products, onSave, onDelete, saving }: {
+  collectionKey: string; collection: any; products: Product[]; onSave: (key: string, data: any) => void; onDelete: (key: string) => void; saving: boolean
+}) {
+  const [draft, setDraft] = useState(collection)
+  useEffect(() => { setDraft(collection) }, [collection])
+  
+  const toggleProduct = (pid: string) => {
+    setDraft((prev: any) => {
+      const ids = prev.productIds || []
+      const next = ids.includes(pid) ? ids.filter((x: string) => x !== pid) : [...ids, pid]
+      return { ...prev, productIds: next }
+    })
+  }
+  
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 p-5">
+      <div className="flex items-center justify-between mb-4">
+        <input 
+          value={draft.title || ''} 
+          onChange={e => setDraft((prev: any) => ({ ...prev, title: e.target.value }))} 
+          className="font-bold text-[16px] border-none p-0 focus:ring-0 w-full" 
+          placeholder="Назва колекції" 
+        />
+        <button type="button" onClick={() => onDelete(collectionKey)} className="text-[12px] text-red-500 ml-4 whitespace-nowrap">Видалити</button>
+      </div>
+      <div className="border border-gray-100 rounded-xl p-3 max-h-60 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-1.5">
+        {products.map(p => (
+          <label key={p.id} className="flex items-center gap-2.5 p-2 hover:bg-gray-50 rounded-xl cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={(draft.productIds || []).includes(p.id)} 
+              onChange={() => toggleProduct(p.id)} 
+              className="accent-black" 
+            />
+            {getProductImg(p) && <img src={resolveImg(getProductImg(p))} className="w-8 h-8 rounded object-cover" />}
+            <span className="text-[12px] truncate">{p.name}</span>
+          </label>
+        ))}
+      </div>
+      <div className="mt-4 flex justify-end">
+        <button 
+          type="button" 
+          onClick={() => onSave(collectionKey, draft)} 
+          disabled={saving} 
+          className="h-9 px-6 rounded-xl bg-black text-white text-[13px] font-bold disabled:opacity-50"
+        >
+          {saving ? 'Збереження...' : 'Зберегти'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function ExtraCollectionsTab({ content, products, onCreate, onDelete, onUpdate, saving }: {
   content: any; products: Product[]; onCreate: (k: string, t: string) => void; onDelete: (k: string) => void; onUpdate: (k: string, d: any) => void; saving: boolean
 }) {
@@ -399,26 +462,23 @@ function ExtraCollectionsTab({ content, products, onCreate, onDelete, onUpdate, 
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <button onClick={() => { const t = prompt('Назва:'); if(t) onCreate(`extra_${Date.now()}`, t) }} className="h-9 px-4 rounded-xl bg-black text-white text-[13px] font-bold">+ Створити</button>
+        <button type="button" onClick={() => { const t = prompt('Назва:'); if(t) onCreate(`extra_${Date.now()}`, t) }} className="h-9 px-4 rounded-xl bg-black text-white text-[13px] font-bold">+ Створити</button>
       </div>
-      {extras.map(([key, col]: [string, any]) => (
-        <div key={key} className="bg-white rounded-2xl border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <input value={col.title || ''} onChange={e => onUpdate(key, { title: e.target.value })} className="font-bold text-[16px] border-none p-0 focus:ring-0" />
-            <button onClick={() => onDelete(key)} className="text-[12px] text-red-500">Видалити</button>
-          </div>
-          <div className="border border-gray-100 rounded-xl p-3 max-h-60 overflow-y-auto grid grid-cols-1 lg:grid-cols-2 gap-1.5">
-            {products.map(p => (
-              <label key={p.id} className="flex items-center gap-2.5 p-2 hover:bg-gray-50 rounded-xl cursor-pointer">
-                <input type="checkbox" checked={col.productIds?.includes(p.id)} onChange={e => {
-                  const next = e.target.checked ? [...(col.productIds || []), p.id] : (col.productIds || []).filter((x:any) => x !== p.id)
-                  onUpdate(key, { productIds: next })
-                }} className="accent-black" />
-                <span className="text-[12px] truncate">{p.name}</span>
-              </label>
-            ))}
-          </div>
+      {extras.length === 0 && (
+        <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center text-gray-400">
+          Немає додаткових колекцій. Натисніть "+ Створити" щоб додати.
         </div>
+      )}
+      {extras.map(([key, col]: [string, any]) => (
+        <ExtraCollectionCard 
+          key={key} 
+          collectionKey={key} 
+          collection={col} 
+          products={products} 
+          onSave={onUpdate} 
+          onDelete={onDelete} 
+          saving={saving} 
+        />
       ))}
     </div>
   )
@@ -428,15 +488,15 @@ function ExtraCollectionsTab({ content, products, onCreate, onDelete, onUpdate, 
 function TickerItemCard({ banner, onSave, onDelete, saving }: {
   banner: PromoBannerTicker; onSave: (id: string, patch: any) => void; onDelete: (id: string) => void; saving: boolean
 }) {
-  const [draft, setDraft] = useState({ ...banner })
-  useEffect(() => { setDraft({ ...banner }) }, [banner.id, banner.active, banner.showAnimation])
+  const [draft, setDraft] = useState(banner)
+  useEffect(() => { setDraft(banner) }, [banner])
   const upd = (k: keyof PromoBannerTicker, v: any) => setDraft(p => ({ ...p, [k]: v }))
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5">
       <div className="flex items-center justify-between mb-4">
         <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" checked={!!draft.active} onChange={e => upd('active', e.target.checked)} className="accent-black" /> Активний</label>
-        <button onClick={() => onDelete(banner.id)} className="text-[12px] text-red-400">Видалити</button>
+        <button type="button" onClick={() => onDelete(banner.id)} className="text-[12px] text-red-400">Видалити</button>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Field label="Текст"><textarea value={draft.text} onChange={e => upd('text', e.target.value)} className="w-full p-3 rounded-lg border border-gray-200 text-[13px] h-24 resize-none" /></Field>
@@ -449,7 +509,9 @@ function TickerItemCard({ banner, onSave, onDelete, saving }: {
         </div>
       </div>
       <div className="mt-4 flex justify-end">
-        <button onClick={() => onSave(banner.id, draft)} className="h-9 px-6 rounded-xl bg-black text-white text-[13px] font-bold">Зберегти</button>
+        <button type="button" onClick={() => onSave(banner.id, draft)} disabled={saving} className="h-9 px-6 rounded-xl bg-black text-white text-[13px] font-bold disabled:opacity-50">
+          {saving ? 'Збереження...' : 'Зберегти'}
+        </button>
       </div>
     </div>
   )
@@ -460,7 +522,12 @@ function TickerTab({ promoBanners, onCreate, onUpdate, onDelete, saving }: {
 }) {
   return (
     <div className="space-y-5">
-      <div className="flex justify-end"><button onClick={onCreate} className="h-9 px-4 rounded-xl bg-black text-white text-[13px] font-bold">+ Додати</button></div>
+      <div className="flex justify-end"><button type="button" onClick={onCreate} className="h-9 px-4 rounded-xl bg-black text-white text-[13px] font-bold">+ Додати</button></div>
+      {promoBanners.length === 0 && (
+        <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center text-gray-400">
+          Немає промо-рядків. Натисніть "+ Додати" щоб створити.
+        </div>
+      )}
       {promoBanners.map(b => <TickerItemCard key={b.id} banner={b} onSave={onUpdate} onDelete={onDelete} saving={saving} />)}
     </div>
   )
@@ -480,10 +547,10 @@ export default function AdminContentPage() {
     try {
       setLoading(true)
       const [c, p, b, ct] = await Promise.all([
-        fetch(`${API_BASE}/api/v1/content`).then(r => r.json()),
-        fetch(`${API_BASE}/api/v1/products`).then(r => r.json()),
-        fetch(`${API_BASE}/api/v1/promo-banners`).then(r => r.json()),
-        fetch(`${API_BASE}/api/v1/categories`).then(r => r.json()),
+        fetch(`${API_BASE}/content`).then(r => r.json()),
+        fetch(`${API_BASE}/products`).then(r => r.json()),
+        fetch(`${API_BASE}/promo-banners`).then(r => r.json()),
+        fetch(`${API_BASE}/categories`).then(r => r.json()),
       ])
       setContent(c); setProducts(p); setPromoBanners(b); setCategories(ct)
     } finally { setLoading(false) }
@@ -494,8 +561,11 @@ export default function AdminContentPage() {
   const updContent = async (p: any) => {
     setSaving(true)
     try {
-      const next = content || {}
-      const res = await fetch(`${API_BASE}/api/v1/content`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...next, ...p }) })
+      const res = await fetch(`${API_BASE}/content`, { 
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(p) 
+      })
       if (res.ok) await fetchData()
     } finally { setSaving(false) }
   }
@@ -503,7 +573,7 @@ export default function AdminContentPage() {
   const updCollection = async (key: string, data: any) => {
     setSaving(true)
     try {
-      await fetch(`${API_BASE}/api/v1/content/collections/${key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+      await fetch(`${API_BASE}/content/collections/${key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
       await fetchData()
     } finally { setSaving(false) }
   }
@@ -517,33 +587,41 @@ export default function AdminContentPage() {
   }
 
   const delExtra = async (k: string) => {
+    if (!confirm('Видалити цю колекцію?')) return
     setSaving(true)
-    const next = { ...content }
+    const next: any = { ...content }
     delete next[k]
     try {
-      await fetch(`${API_BASE}/api/v1/content`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) })
+      await fetch(`${API_BASE}/content`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) })
       await fetchData()
     } finally { setSaving(false) }
   }
 
   const tickerActions = {
     create: async () => {
-      await fetch(`${API_BASE}/api/v1/promo-banners`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'Новий текст', active: true }) })
-      await fetchData()
+      setSaving(true)
+      try {
+        await fetch(`${API_BASE}/promo-banners`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: 'Новий текст', active: true }) })
+        await fetchData()
+      } finally { setSaving(false) }
     },
     update: async (id: string, p: any) => {
       setSaving(true)
-      await fetch(`${API_BASE}/api/v1/promo-banners/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) })
-      await fetchData()
-      setSaving(false)
+      try {
+        await fetch(`${API_BASE}/promo-banners/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) })
+        await fetchData()
+      } finally { setSaving(false) }
     },
     delete: async (id: string) => {
-      await fetch(`${API_BASE}/api/v1/promo-banners/${id}`, { method: 'DELETE' })
-      await fetchData()
+      setSaving(true)
+      try {
+        await fetch(`${API_BASE}/promo-banners/${id}`, { method: 'DELETE' })
+        await fetchData()
+      } finally { setSaving(false) }
     }
   }
 
-  if (loading) return <div className="p-10 text-center">Завантаження...</div>
+  if (loading) return <div className="p-10 text-center">Завантаження</div>
 
   return (
     <div className="min-h-screen bg-[#f5f5f3]">
@@ -557,7 +635,7 @@ export default function AdminContentPage() {
               </button>
             ))}
           </div>
-          {saving && <div className="text-[11px] text-gray-400 animate-pulse">Збереження...</div>}
+          {saving && <div className="text-[11px] text-gray-400 animate-pulse">Збереження</div>}
         </div>
       </div>
 

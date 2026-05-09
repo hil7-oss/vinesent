@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 
 type Store = {
   id: string
@@ -112,20 +112,20 @@ export default function AdminStoresPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Назва</div>
-                <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="w-full h-11 px-4 rounded-xl border border-black/15 text-[13px] outline-none focus:border-black/40 transition" placeholder="Напр. Vinesent Store" />
+                <input value={form.name} onChange={e => setForm(p => ({ p, name: e.target.value }))} className="w-full h-11 px-4 rounded-xl border border-black/15 text-[13px] outline-none focus:border-black/40 transition" placeholder="Напр. Vinesent Store" />
               </div>
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Місто</div>
-                <input value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} className="w-full h-11 px-4 rounded-xl border border-black/15 text-[13px] outline-none focus:border-black/40 transition" placeholder="Київ" />
+                <input value={form.city} onChange={e => setForm(p => ({ p, city: e.target.value }))} className="w-full h-11 px-4 rounded-xl border border-black/15 text-[13px] outline-none focus:border-black/40 transition" placeholder="Київ" />
               </div>
             </div>
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Адреса</div>
-              <input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} className="w-full h-11 px-4 rounded-xl border border-black/15 text-[13px] outline-none focus:border-black/40 transition" placeholder="проспект Київ Василя Порика, 2, Україна, 02000" />
+              <input value={form.address} onChange={e => setForm(p => ({ p, address: e.target.value }))} className="w-full h-11 px-4 rounded-xl border border-black/15 text-[13px] outline-none focus:border-black/40 transition" placeholder="проспект Київ Василя Порика, 2, Україна, 02000" />
             </div>
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Google Maps URL</div>
-              <input value={form.mapsUrl} onChange={e => setForm(p => ({ ...p, mapsUrl: e.target.value }))} className="w-full h-11 px-4 rounded-xl border border-black/15 text-[13px] outline-none focus:border-black/40 transition" placeholder="https://maps.app.goo.gl/..." />
+              <input value={form.mapsUrl} onChange={e => setForm(p => ({ p, mapsUrl: e.target.value }))} className="w-full h-11 px-4 rounded-xl border border-black/15 text-[13px] outline-none focus:border-black/40 transition" placeholder="https://maps.app.goo.gl/" />
             </div>
             {error && <div className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</div>}
             <div className="flex items-center gap-2 pt-2">

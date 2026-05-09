@@ -167,7 +167,7 @@ def init_seo_hidden():
 
 def seed_all():
     """Run all initialization on startup."""
-    logger.info("Running content initialization...")
+    logger.info("Running content initialization")
     seed_base_categories()
     init_content_data()
     init_seo_hidden()

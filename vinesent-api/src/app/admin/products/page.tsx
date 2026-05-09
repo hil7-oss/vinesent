@@ -14,7 +14,7 @@ type Variant = { id?: string; productId?: string; size: string; color: string; s
 type ColorOption = { name: string; hex: string }
 type ProductImage = { id: string; url: string; file?: File }
 
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 const SIZE_OPTIONS = ['104','110','116','122','128','134','140','146','152','158','164','170','176']
 const COLOR_OPTIONS: ColorOption[] = [
   { name: 'Чорний', hex: '#000000' }, { name: 'Білий', hex: '#ffffff' },
@@ -279,7 +279,7 @@ function ProductForm({ isOpen, onClose, product, categories, onSuccess }: {
     if (!e.target.files) return
     Array.from(e.target.files).forEach(f => {
       const reader = new FileReader()
-      reader.onload = () => setImages(prev => [...prev, { id: Math.random().toString(36).slice(2), url: reader.result as string, file: f }])
+      reader.onload = () => setImages(prev => [prev, { id: Math.random().toString(36).slice(2), url: reader.result as string, file: f }])
       reader.readAsDataURL(f)
     })
   }
@@ -288,7 +288,7 @@ function ProductForm({ isOpen, onClose, product, categories, onSuccess }: {
     setSaving(true); setError('')
     const existingUrls = images.filter(i => !i.file).map(i => i.url)
     const filesToUpload = images.filter(i => i.file).map(i => i.file!)
-    if (filesToUpload.length > 0) { setUploading(true); existingUrls.push(...await uploadImages(filesToUpload)); setUploading(false) }
+    if (filesToUpload.length > 0) { setUploading(true); existingUrls.push(await uploadImages(filesToUpload)); setUploading(false) }
     const selectedCategoryId = form.categoryIds[0]
     const totalVariantStock = variants.reduce((s, v) => s + (Number(v.stock) || 0), 0)
     const body: any = { name: form.name, price: parseFloat(form.price) || 0, salePrice: parseFloat(form.salePrice) || null, cost: parseFloat(form.cost) || 0, stock: variants.length ? totalVariantStock : (Number(form.stock) || 0), description: form.description, categoryId: selectedCategoryId, categoryIds: form.categoryIds, images: JSON.stringify(existingUrls), seoTitle: form.seoTitle, seoDescription: form.seoDescription }
@@ -302,7 +302,7 @@ function ProductForm({ isOpen, onClose, product, categories, onSuccess }: {
       if (mtxt) { try { const parsed = JSON.parse(mtxt); if (parsed && typeof parsed === 'object') await fetch(`${API_BASE}/products/${saved.id}/measurements`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parsed) }) } catch {} }
       const shouldGenerate = Boolean(aiFile) || filesToUpload.length > 0
       if (shouldGenerate) {
-        setAiGenerating(true); setAiMessage('Запуск генерації...')
+        setAiGenerating(true); setAiMessage('Запуск генерації')
         const fd = new FormData()
         if (aiFile) fd.append('file', aiFile)
         fd.append('category', categoryKey || 'clothing'); fd.append('colorHex', aiHex); fd.append('gender', aiGender); fd.append('productId', saved.id)
@@ -324,7 +324,7 @@ function ProductForm({ isOpen, onClose, product, categories, onSuccess }: {
       const res = await fetch(`${API_BASE}/products/ai-autofill`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: seed }) })
       const data = await res.json().catch(() => null)
       if (!res.ok) { setAiAutoError(typeof data?.detail === 'string' ? data.detail : 'Помилка автозаповнення'); setAiAutoLoading(false); return }
-      setForm(prev => ({ ...prev, name: data?.name || prev.name, description: data?.description || prev.description, seoTitle: data?.seoTitle || prev.seoTitle, seoDescription: data?.seoDescription || prev.seoDescription, price: String(typeof data?.price === 'number' ? data.price : prev.price), salePrice: String(typeof data?.salePrice === 'number' ? (data.salePrice || '') : prev.salePrice), stock: String(typeof data?.stock === 'number' ? data.stock : prev.stock), categoryId: data?.categoryId || prev.categoryId, categoryIds: data?.categoryId ? [data.categoryId] : prev.categoryIds }))
+      setForm(prev => ({ prev, name: data?.name || prev.name, description: data?.description || prev.description, seoTitle: data?.seoTitle || prev.seoTitle, seoDescription: data?.seoDescription || prev.seoDescription, price: String(typeof data?.price === 'number' ? data.price : prev.price), salePrice: String(typeof data?.salePrice === 'number' ? (data.salePrice || '') : prev.salePrice), stock: String(typeof data?.stock === 'number' ? data.stock : prev.stock), categoryId: data?.categoryId || prev.categoryId, categoryIds: data?.categoryId ? [data.categoryId] : prev.categoryIds }))
       if (data?.audience === 'female') setAiGender('female'); else if (data?.audience === 'male') setAiGender('male'); else setAiGender('unisex')
       const sizes = Array.isArray(data?.sizes) ? data.sizes.filter((s: any) => typeof s === 'string' && s) : []
       const colors = Array.isArray(data?.colors) ? data.colors.filter((c: any) => typeof c === 'string' && c) : []
@@ -339,19 +339,19 @@ function ProductForm({ isOpen, onClose, product, categories, onSuccess }: {
   const toggleCategory = (id: string, checked: boolean) => {
     setForm(prev => {
       const has = prev.categoryIds.includes(id)
-      if (checked && !has) return { ...prev, categoryIds: [...prev.categoryIds, id] }
-      if (!checked && has) return { ...prev, categoryIds: prev.categoryIds.filter(x => x !== id) }
+      if (checked && !has) return { prev, categoryIds: [prev.categoryIds, id] }
+      if (!checked && has) return { prev, categoryIds: prev.categoryIds.filter(x => x !== id) }
       return prev
     })
   }
 
-  const toggleSize = (s: string) => setSelectedSizes(p => p.includes(s) ? p.filter(x => x !== s) : [...p, s])
-  const toggleColor = (c: string) => setSelectedColors(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c])
+  const toggleSize = (s: string) => setSelectedSizes(p => p.includes(s) ? p.filter(x => x !== s) : [p, s])
+  const toggleColor = (c: string) => setSelectedColors(p => p.includes(c) ? p.filter(x => x !== c) : [p, c])
 
   const addVariantRows = () => {
     if (!selectedSizes.length || !selectedColors.length) return
     setVariants(prev => {
-      const next = [...prev]
+      const next = [prev]
       selectedSizes.forEach(size => selectedColors.forEach(color => {
         if (!next.some(v => v.size === size && v.color === color)) next.push({ size, color, stock: 0, cost: parseFloat(form.cost) || 0 })
       }))
@@ -360,7 +360,7 @@ function ProductForm({ isOpen, onClose, product, categories, onSuccess }: {
     setSelectedSizes([]); setSelectedColors([])
   }
 
-  const updateVariant = (i: number, patch: Partial<Variant>) => setVariants(p => p.map((v, idx) => idx === i ? { ...v, ...patch } : v))
+  const updateVariant = (i: number, patch: Partial<Variant>) => setVariants(p => p.map((v, idx) => idx === i ? { v, patch } : v))
   const removeVariant = (i: number) => setVariants(p => p.filter((_, idx) => idx !== i))
 
   const handleAiFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -435,10 +435,10 @@ function ProductForm({ isOpen, onClose, product, categories, onSuccess }: {
                 <Panel>
                   <SectionLabel>✦ Автозаповнення через AI</SectionLabel>
                   {aiAutoError && <div className="text-[12px] text-red-500 bg-red-50 rounded-lg px-3 py-2">{aiAutoError}</div>}
-                  <textarea value={aiAutoText} onChange={e => setAiAutoText(e.target.value)} rows={4} className={textareaCls} placeholder="Назва, категорія, кольори, розміри, ціна/знижка, залишок, ключові особливості..." />
+                  <textarea value={aiAutoText} onChange={e => setAiAutoText(e.target.value)} rows={4} className={textareaCls} placeholder="Назва, категорія, кольори, розміри, ціна/знижка, залишок, ключові особливості" />
                   <div className="flex items-center gap-2">
                     <button type="button" onClick={handleAutoFill} disabled={aiAutoLoading} className="h-9 px-4 rounded-lg bg-gray-900 text-white text-[12px] font-medium disabled:opacity-50 hover:bg-gray-800 transition whitespace-nowrap">
-                      {aiAutoLoading ? 'Автозаповнення...' : 'Заповнити поля'}
+                      {aiAutoLoading ? 'Автозаповнення' : 'Заповнити поля'}
                     </button>
                     <div className="text-[11px] text-gray-400 leading-tight">AI сформує назву, опис, SEO, категорію, ціни, розміри та кольори.</div>
                   </div>
@@ -452,28 +452,28 @@ function ProductForm({ isOpen, onClose, product, categories, onSuccess }: {
                 <Panel>
                   <SectionLabel>Назва та slug</SectionLabel>
                   <Field label="Назва товару">
-                    <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className={inputCls} placeholder="Наприклад: Куртка зимова хлопчик" />
+                    <input value={form.name} onChange={e => setForm(p => ({ p, name: e.target.value }))} className={inputCls} placeholder="Наприклад: Куртка зимова хлопчик" />
                   </Field>
                   <Field label="Slug" hint="Якщо порожньо — генерується автоматично">
-                    <input value={form.slug} onChange={e => { setForm(p => ({ ...p, slug: e.target.value })); setAutoSlug(e.target.value.length === 0) }} className={inputCls} placeholder="auto-generated" />
+                    <input value={form.slug} onChange={e => { setForm(p => ({ p, slug: e.target.value })); setAutoSlug(e.target.value.length === 0) }} className={inputCls} placeholder="auto-generated" />
                   </Field>
                 </Panel>
 
                 <Panel>
                   <SectionLabel>Ціноутворення</SectionLabel>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="Ціна (грн)"><input type="number" value={form.price} onChange={e => setForm(p => ({...p, price: e.target.value}))} className={inputCls} placeholder="0" /></Field>
-                    <Field label="Ціна зі знижкою"><input type="number" value={form.salePrice} onChange={e => setForm(p => ({...p, salePrice: e.target.value}))} className={inputCls} placeholder="—" /></Field>
-                    <Field label="Собівартість"><input type="number" value={form.cost} onChange={e => setForm(p => ({...p, cost: e.target.value}))} className={inputCls} placeholder="0" /></Field>
+                    <Field label="Ціна (грн)"><input type="number" value={form.price} onChange={e => setForm(p => ({p, price: e.target.value}))} className={inputCls} placeholder="0" /></Field>
+                    <Field label="Ціна зі знижкою"><input type="number" value={form.salePrice} onChange={e => setForm(p => ({p, salePrice: e.target.value}))} className={inputCls} placeholder="—" /></Field>
+                    <Field label="Собівартість"><input type="number" value={form.cost} onChange={e => setForm(p => ({p, cost: e.target.value}))} className={inputCls} placeholder="0" /></Field>
                     <Field label="Залишок" hint={variants.length > 0 ? 'Розрахунок по варіантах' : undefined}>
-                      <input type="number" value={form.stock} onChange={e => setForm(p => ({...p, stock: e.target.value}))} readOnly={variants.length > 0} className={inputCls + (variants.length > 0 ? ' bg-gray-50 text-gray-400 cursor-not-allowed' : '')} />
+                      <input type="number" value={form.stock} onChange={e => setForm(p => ({p, stock: e.target.value}))} readOnly={variants.length > 0} className={inputCls + (variants.length > 0 ? ' bg-gray-50 text-gray-400 cursor-not-allowed' : '')} />
                     </Field>
                   </div>
                 </Panel>
 
                 <Panel>
                   <SectionLabel>Опис</SectionLabel>
-                  <textarea value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))} rows={5} className={textareaCls} placeholder="Опис товару…" />
+                  <textarea value={form.description} onChange={e => setForm(p => ({p, description: e.target.value}))} rows={5} className={textareaCls} placeholder="Опис товару…" />
                 </Panel>
               </div>
 
@@ -629,7 +629,7 @@ function ProductForm({ isOpen, onClose, product, categories, onSuccess }: {
                   <Panel>
                     <div className="flex items-center justify-between">
                       <SectionLabel>Варіанти ({variants.length})</SectionLabel>
-                      <button type="button" onClick={() => setVariants(p => [...p, { size:'', color:'', stock:0, cost: parseFloat(form.cost)||0 }])} className="text-[10px] text-blue-500 hover:underline mb-2.5">+ вручну</button>
+                      <button type="button" onClick={() => setVariants(p => [p, { size:'', color:'', stock:0, cost: parseFloat(form.cost)||0 }])} className="text-[10px] text-blue-500 hover:underline mb-2.5">+ вручну</button>
                     </div>
                     <div className="space-y-1.5 max-h-64 overflow-y-auto pr-0.5">
                       {variants.map((v, i) => (
@@ -668,14 +668,14 @@ function ProductForm({ isOpen, onClose, product, categories, onSuccess }: {
                 <SectionLabel>SEO налаштування</SectionLabel>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[12px] text-gray-500">Автозаповнення на основі назви</span>
-                  <button type="button" onClick={() => setForm(p => ({ ...p, seoTitle: p.seoTitle || `${p.name} | VINESENT`, seoDescription: p.seoDescription || `Купити ${p.name} — якісний дитячий одяг від VINESENT.` }))} className="text-[11px] text-blue-500 hover:underline">Згенерувати</button>
+                  <button type="button" onClick={() => setForm(p => ({ p, seoTitle: p.seoTitle || `${p.name} | VINESENT`, seoDescription: p.seoDescription || `Купити ${p.name} — якісний дитячий одяг від VINESENT.` }))} className="text-[11px] text-blue-500 hover:underline">Згенерувати</button>
                 </div>
                 <Field label="SEO Title">
-                  <input value={form.seoTitle} onChange={e => setForm(p => ({...p, seoTitle: e.target.value}))} className={inputCls} />
+                  <input value={form.seoTitle} onChange={e => setForm(p => ({p, seoTitle: e.target.value}))} className={inputCls} />
                   <div className={`text-[10px] mt-1 ${form.seoTitle.length > 60 ? 'text-red-400' : 'text-gray-400'}`}>{form.seoTitle.length}/60</div>
                 </Field>
                 <Field label="SEO Description">
-                  <textarea value={form.seoDescription} onChange={e => setForm(p => ({...p, seoDescription: e.target.value}))} rows={3} className={textareaCls} />
+                  <textarea value={form.seoDescription} onChange={e => setForm(p => ({p, seoDescription: e.target.value}))} rows={3} className={textareaCls} />
                   <div className={`text-[10px] mt-1 ${form.seoDescription.length > 160 ? 'text-red-400' : 'text-gray-400'}`}>{form.seoDescription.length}/160</div>
                 </Field>
               </Panel>
@@ -733,7 +733,7 @@ function BulkActions({ selectedIds, products, onClear, onSuccess, categories }: 
       const product = products.find(p => p.id === id); if (!product) return
       let newCats = product.categories?.map(c => c.id) || (product.categoryId ? [product.categoryId] : [])
       if (action === 'set') newCats = catIds
-      else if (action === 'add') newCats = [...new Set([...newCats, ...catIds])]
+      else if (action === 'add') newCats = [new Set([newCats, catIds])]
       else if (action === 'remove') newCats = newCats.filter(c => !catIds.includes(c))
       return fetch(`${API_BASE}/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ categoryIds: newCats, categoryId: newCats[0] || null }) })
     }))
@@ -775,7 +775,7 @@ function BulkActions({ selectedIds, products, onClear, onSuccess, categories }: 
             <div className="flex-1 overflow-y-auto min-h-0 mb-4 border border-gray-100 rounded-xl p-2 space-y-0.5">
               {categories.map(c => (
                 <label key={c.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
-                  <input type="checkbox" checked={catIds.includes(c.id)} onChange={e => e.target.checked ? setCatIds(p => [...p, c.id]) : setCatIds(p => p.filter(id => id !== c.id))} className="rounded border-gray-300 accent-gray-900" />
+                  <input type="checkbox" checked={catIds.includes(c.id)} onChange={e => e.target.checked ? setCatIds(p => [p, c.id]) : setCatIds(p => p.filter(id => id !== c.id))} className="rounded border-gray-300 accent-gray-900" />
                   <span className="text-[13px]">{c.name}</span>
                 </label>
               ))}
@@ -855,7 +855,7 @@ export default function AdminProductsPage() {
     })
   }, [viewProducts, search, selectedCategory, categories])
 
-  const toggleSelect = (id: string) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  const toggleSelect = (id: string) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [prev, id])
   const selectAll = () => setSelectedIds(selectedIds.length === filtered.length ? [] : filtered.map(p => p.id))
   const quickUpdate = async (id: string, data: Partial<Product>) => {
     await fetch(`${API_BASE}/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })

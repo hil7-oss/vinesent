@@ -22,7 +22,7 @@ def ai_autofill(data: dict, db: Session = Depends(get_db)):
         raise HTTPException(400, "Text is required")
     
     try:
-        from ...services.gemini_service import parse_product_autofill
+        from fastapi_app.services.gemini_service import parse_product_autofill
         result = parse_product_autofill(text)
         return result
     except Exception as e:
@@ -219,6 +219,7 @@ def create_product(product: dict, db: Session = Depends(get_db)):
     images = product.get('images', '[]')
     seo_title = product.get('seoTitle', '')
     seo_description = product.get('seoDescription', '')
+    gender = product.get('gender', '')
     category_ids = product.get('categoryIds', [])
     
     if not name:
@@ -227,15 +228,15 @@ def create_product(product: dict, db: Session = Depends(get_db)):
     product_id = str(uuid.uuid4())
     
     if not slug:
-        from ...services.slug_service import build_product_slug, ensure_unique_product_slug
+        from fastapi_app.services.slug_service import build_product_slug, ensure_unique_product_slug
         base_slug = build_product_slug(name, slug)
         slug = ensure_unique_product_slug(db, base_slug)
     
     result = db.execute(
         text('''
             INSERT INTO "Product" 
-            (id, name, slug, price, "salePrice", cost, stock, description, "categoryId", images, "seoTitle", "seoDescription", "createdAt", "updatedAt")
-            VALUES (:id, :name, :slug, :price, :sale_price, :cost, :stock, :description, :category_id, :images, :seo_title, :seo_description, NOW(), NOW())
+            (id, name, slug, price, "salePrice", cost, stock, description, "categoryId", images, "seoTitle", "seoDescription", gender, "createdAt", "updatedAt")
+            VALUES (:id, :name, :slug, :price, :sale_price, :cost, :stock, :description, :category_id, :images, :seo_title, :seo_description, :gender, NOW(), NOW())
             RETURNING *
         '''),
         {
@@ -251,6 +252,7 @@ def create_product(product: dict, db: Session = Depends(get_db)):
             'images': images if isinstance(images, str) else json.dumps(images),
             'seo_title': seo_title,
             'seo_description': seo_description,
+            'gender': gender or None,
         }
     ).mappings().first()
     
@@ -292,6 +294,7 @@ def update_product(product_id: str, product: dict, db: Session = Depends(get_db)
         'images': 'images',
         'seoTitle': 'seo_title',
         'seoDescription': 'seo_description',
+        'gender': 'gender',
         'isArchived': 'is_archived',
     }
     

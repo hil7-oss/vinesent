@@ -61,11 +61,11 @@ const nextConfig = {
   experimental: {},
   output: isProd ? 'standalone' : undefined,
   images: {
-    unoptimized: false,  // Включаем оптимизацию!
-    formats: ['image/webp', 'image/avif'],  // Добавляем AVIF (еще лучше WebP)
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920],  // Размеры для разных устройств
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],  // Размеры для thumbnails
-    minimumCacheTTL: 31536000,  // Кеш на 1 год
+    unoptimized: true,  // Отключаем проксирование картинок через Next.js, так как используем Cloudinary
+    formats: ['image/webp', 'image/avif'],  // Оставляем для совместимости, но работать будет Cloudinary
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 31536000,
     remotePatterns: [
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: '**' },
@@ -77,6 +77,10 @@ const nextConfig = {
   // All pages will be rendered on-demand
   async rewrites() {
     return [
+      {
+        source: '/api/fastapi/:path*',
+        destination: `${FASTAPI_URL}/:path*`,
+      },
       {
         source: '/uploads/:path*',
         destination: `${FASTAPI_URL}/uploads/:path*`,

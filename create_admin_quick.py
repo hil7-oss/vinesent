@@ -11,9 +11,14 @@ from datetime import datetime
 # Setup path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from sqlalchemy import text, create_engine
-from sqlalchemy.orm import sessionmaker
-from fastapi_app.services.auth_service import hash_password
+try:
+    from sqlalchemy import text, create_engine
+    from sqlalchemy.orm import sessionmaker
+    from fastapi_app.services.auth_service import hash_password
+except ImportError as e:
+    print(f"Import error: {e}")
+    print("Make sure you are running this from the project root and have dependencies installed.")
+    sys.exit(1)
 
 # Database connection
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://vinesent:vinesent@localhost:5432/vinesent")
@@ -28,72 +33,70 @@ def create_admin():
     password = "admin123"
     name = "Admin"
     
+    print(f"Connecting to database: {DATABASE_URL.split('@')[-1]}")
     db = SessionLocal()
     
     try:
         # Check if exists
         existing = db.execute(
-            text('SELECT id, email, role FROM "User" WHERE email = :email'),
+            text('SELECT id, email, role, password FROM "User" WHERE email = :email'),
             {"email": email}
         ).mappings().first()
         
-        if existing:
-            print(f"✅ User '{email}' already exists with role: {existing['role']}")
-            
-            if existing['role'] != 'ADMIN':
-                db.execute(
-                    text('UPDATE "User" SET role = :role WHERE email = :email'),
-                    {"role": "ADMIN", "email": email}
-                )
-                db.commit()
-                print(f"✅ Updated to ADMIN role")
-            
-            print(f"\n🔐 Login credentials:")
-            print(f"   URL: http://localhost:3001")
-            print(f"   Email: {email}")
-            print(f"   Password: {password}")
-            return
-        
-        # Create new admin
         password_hash = hash_password(password)
-        user_id = str(uuid.uuid4())
         now = datetime.utcnow().isoformat()
         
-        db.execute(
-            text('''
-                INSERT INTO "User" (id, email, password, name, role, "createdAt", "updatedAt")
-                VALUES (:id, :email, :password, :name, :role, :created, :updated)
-            '''),
-            {
-                "id": user_id,
-                "email": email,
-                "password": password_hash,
-                "name": name,
-                "role": "ADMIN",
-                "created": now,
-                "updated": now
-            }
-        )
-        db.commit()
+        if existing:
+            print(f"User '{email}' already exists.")
+            print(f"Current role: {existing['role']}")
+            
+            # Force update role and password
+            db.execute(
+                text('UPDATE "User" SET role = :role, password = :password, "updatedAt" = :updated WHERE email = :email'),
+                {"role": "ADMIN", "password": password_hash, "updated": now, "email": email}
+            )
+            db.commit()
+            print(f"Updated user to ADMIN role and reset password to '{password}'")
+            
+        else:
+            # Create new admin
+            user_id = str(uuid.uuid4())
+            
+            db.execute(
+                text('''
+                    INSERT INTO "User" (id, email, password, name, role, "createdAt", "updatedAt")
+                    VALUES (:id, :email, :password, :name, :role, :created, :updated)
+                '''),
+                {
+                    "id": user_id,
+                    "email": email,
+                    "password": password_hash,
+                    "name": name,
+                    "role": "ADMIN",
+                    "created": now,
+                    "updated": now
+                }
+            )
+            db.commit()
+            print(f"Created new ADMIN user: {email}")
         
         print("\n" + "=" * 60)
-        print("✅ Admin user created successfully!")
+        print("SUCCESS: Admin user is ready!")
         print("=" * 60)
-        print(f"\n🔐 Login credentials:")
+        print(f"Login credentials:")
         print(f"   URL: http://localhost:3001")
         print(f"   Email: {email}")
         print(f"   Password: {password}")
-        print("\n⚠️  Change password after first login!")
         print("=" * 60)
         
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nERROR: {e}")
         db.rollback()
-        raise
+        # Don't raise, just print so user can see it
     finally:
         db.close()
 
 
 if __name__ == "__main__":
-    print("Creating admin user...")
+    print("Starting admin creation script...")
     create_admin()

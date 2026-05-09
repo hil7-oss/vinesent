@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { slugify } from '@/lib/slug'
 import { fetchApi } from '@/lib/api'
 
@@ -7,10 +7,10 @@ export const dynamic = 'force-dynamic'
 
 type Category = {
   id: string; name: string; slug: string; image?: string
-  description?: string; parentId?: string; productCount?: number
+  description?: string; parentId?: string; productCount?: number; order?: number
 }
 
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 
 const formatError = (value: any): string => {
   if (!value) return ''
@@ -135,7 +135,7 @@ function CategoryForm({
                 value={form.image}
                 onChange={e => setForm((p: any) => ({ ...p, image: e.target.value }))}
                 className={inp + ' flex-1'}
-                placeholder="https://..."
+                placeholder="https://"
               />
               <label className="h-11 w-11 flex-shrink-0 flex items-center justify-center bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition">
                 <svg className="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
@@ -167,20 +167,26 @@ function CategoryForm({
 
 // ─── parent card ─────────────────────────────
 function ParentCard({
-  parent, children, onEdit, onDelete, onAddChild,
+  parent, children, onEdit, onDelete, onAddChild, isDragOver,
 }: {
   parent: Category
   children: Category[]
   onEdit: (c: Category) => void
   onDelete: (id: string) => void
   onAddChild: (parentId: string) => void
+  isDragOver?: boolean
 }) {
   const [open, setOpen] = useState(true)
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+    <div className={`bg-white rounded-2xl border overflow-hidden transition-shadow ${isDragOver ? 'border-gray-800 shadow-lg' : 'border-gray-100'}`}>
       {/* Parent row */}
       <div className="flex items-center gap-3 px-4 py-3.5">
+        {/* Drag handle */}
+        <div className="w-6 h-11 flex items-center justify-center cursor-grab text-gray-300 hover:text-gray-500 transition flex-shrink-0">
+          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>
+        </div>
+
         {/* Image / placeholder */}
         <div className="w-11 h-11 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
           {parent.image
@@ -268,11 +274,29 @@ export default function AdminCategoriesPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [autoSlug, setAutoSlug] = useState(true)
+  const dragIdxRef = useRef<number | null>(null)
+  const [dragIdxVis, setDragIdxVis] = useState<number | null>(null)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+
+  const handleReorder = async (ordered: Category[]) => {
+    const payload = ordered.map((c, i) => ({ id: c.id, order: i }))
+    try {
+      const res = await fetchApi('/categories/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setCategories(Array.isArray(data) ? data : [])
+      }
+    } catch {}
+  }
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await fetchApi('/api/v1/categories')
+      const res = await fetchApi('/categories')
       const data = await res.json()
       setCategories(Array.isArray(data) ? data : [])
     } catch { setCategories([]) }
@@ -302,7 +326,7 @@ export default function AdminCategoriesPage() {
     const file = e.target.files?.[0]; if (!file) return
     const fd = new FormData(); fd.append('file', file)
     try {
-      const res = await fetchApi('/api/v1/upload', { method: 'POST', body: fd })
+      const res = await fetchApi('/upload', { method: 'POST', body: fd })
       if (!res.ok) throw new Error()
       const data = await res.json()
       setForm(p => ({ ...p, image: data.url }))
@@ -318,7 +342,7 @@ export default function AdminCategoriesPage() {
       image: form.image,
       parentId: form.parentId || undefined,
     }
-    const url = editId ? `${API_BASE}/api/v1/categories/${editId}` : `${API_BASE}/api/v1/categories`
+    const url = editId ? `/categories/${editId}` : `/categories`
     const res = await fetch(url, { method: editId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     if (!res.ok) {
       const data = await res.json().catch(() => null)
@@ -330,11 +354,39 @@ export default function AdminCategoriesPage() {
 
   const deleteCategory = async (id: string) => {
     if (!window.confirm('Видалити категорію?')) return
-    await fetch(`${API_BASE}/api/v1/categories/${id}`, { method: 'DELETE' })
+    await fetch(`/categories/${id}`, { method: 'DELETE' })
     fetchData()
   }
 
-  const parents = categories.filter(c => !c.parentId)
+  const sortByOrder = (list: Category[]) => [...list].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    dragIdxRef.current = idx
+    setDragIdxVis(idx)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(idx))
+  }
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragIdxRef.current !== null && dragIdxRef.current !== idx) setDragOverIdx(idx)
+  }
+  const handleDragLeave = () => { setDragOverIdx(null) }
+  const handleDrop = (e: React.DragEvent, dropIdx: number) => {
+    e.preventDefault()
+    const from = parseInt(e.dataTransfer.getData('text/plain'))
+    if (isNaN(from) || from === dropIdx) { dragIdxRef.current = null; setDragIdxVis(null); setDragOverIdx(null); return }
+    const sorted = sortByOrder(parents)
+    const [moved] = sorted.splice(from, 1)
+    sorted.splice(dropIdx, 0, moved)
+    handleReorder(sorted)
+    dragIdxRef.current = null
+    setDragIdxVis(null)
+    setDragOverIdx(null)
+  }
+  const handleDragEnd = () => { dragIdxRef.current = null; setDragIdxVis(null); setDragOverIdx(null) }
+
+  const parents = sortByOrder(categories.filter(c => !c.parentId))
   const orphans = categories.filter(c => c.parentId && !categories.some(p => p.id === c.parentId))
   const totalProducts = categories.reduce((s, c) => s + (c.productCount || 0), 0)
 
@@ -389,15 +441,26 @@ export default function AdminCategoriesPage() {
         {/* Category tree */}
         {!loading && (
           <div className="space-y-3">
-            {parents.map(parent => (
-              <ParentCard
+            {parents.map((parent, idx) => (
+              <div
                 key={parent.id}
-                parent={parent}
-                children={categories.filter(c => c.parentId === parent.id)}
-                onEdit={startEdit}
-                onDelete={deleteCategory}
-                onAddChild={startCreateChild}
-              />
+                draggable
+                onDragStart={e => handleDragStart(e, idx)}
+                onDragOver={e => handleDragOver(e, idx)}
+                onDragLeave={handleDragLeave}
+                onDrop={e => handleDrop(e, idx)}
+                onDragEnd={handleDragEnd}
+                className={dragIdxVis === idx ? 'opacity-30' : ''}
+              >
+                <ParentCard
+                  parent={parent}
+                  children={categories.filter(c => c.parentId === parent.id)}
+                  onEdit={startEdit}
+                  onDelete={deleteCategory}
+                  onAddChild={startCreateChild}
+                  isDragOver={dragOverIdx === idx}
+                />
+              </div>
             ))}
 
             {/* Orphans */}

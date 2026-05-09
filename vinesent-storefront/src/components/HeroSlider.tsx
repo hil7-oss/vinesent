@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import Image from 'next/image'
+import { getOptimizedImage } from '@/lib/utils'
 import { useEffect, useMemo, useState } from 'react'
 
 type Slide = {
@@ -34,7 +35,8 @@ export default function HeroSlider({ slides }: { slides: Slide[] }) {
   return (
     <div className="relative w-full aspect-[375/450] lg:aspect-[16/7] overflow-hidden">
       {items.map((slide, i) => {
-        const img = slide.image || '/globe.svg'
+        const img = getOptimizedImage(slide.image || '/globe.svg', { width: 1920 })
+        const placeholder = getOptimizedImage(slide.image || '/globe.svg', { width: 40, quality: 30, blur: 1000 })
         const altText = slide.title && slide.subtitle 
           ? `${slide.title} ${slide.subtitle} - VINESENT`
           : slide.title || 'VINESENT - Преміум дитячий одяг'
@@ -46,6 +48,8 @@ export default function HeroSlider({ slides }: { slides: Slide[] }) {
               title={slide.title || 'VINESENT'}
               fill
               sizes="100vw"
+              placeholder="blur"
+              blurDataURL={placeholder}
               className="object-cover"
               priority={i === 0}
             />

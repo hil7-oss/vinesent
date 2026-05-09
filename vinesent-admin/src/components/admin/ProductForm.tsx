@@ -11,6 +11,7 @@ export type Product = {
   categories?: Category[]; description?: string;
   seoTitle?: string; seoDescription?: string;
   isArchived?: boolean;
+  gender?: string;
 }
 export type Category = { id: string; name: string; slug: string; parentId?: string; productCount?: number }
 export type Variant = { id?: string; productId?: string; size: string; color: string; stock: number; price?: number | null; salePrice?: number | null; cost?: number; sku?: string; barcode?: string; images?: string | null }
@@ -81,7 +82,7 @@ function Panel({ children }: { children: React.ReactNode }) {
 export function ProductForm({ isOpen, onClose, product, categories, onSuccess, allProducts }: {
   isOpen: boolean; onClose: () => void; product: Product | null; categories: Category[]; onSuccess: () => void; allProducts: Product[]
 }) {
-  const [form, setForm] = useState({ name:'', slug:'', price:'', salePrice:'', cost:'0', stock:'0', description:'', categoryId:'', categoryIds:[] as string[], seoTitle:'', seoDescription:'' })
+  const [form, setForm] = useState({ name:'', slug:'', price:'', salePrice:'', cost:'0', stock:'0', description:'', categoryId:'', categoryIds:[] as string[], seoTitle:'', seoDescription:'', gender:'' })
   const [variants, setVariants] = useState<Variant[]>([])
   const [images, setImages] = useState<ProductImage[]>([])
   const [selectedSizes, setSelectedSizes] = useState<string[]>([])
@@ -158,23 +159,23 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
       const categoryIds =
         (product.categories?.filter(c => !['sale', 'new'].includes(String(c.slug || '').toLowerCase())).map(c => c.id)) ||
         (product.categoryId ? [product.categoryId] : [])
-      setForm({ name: product.name, slug: product.slug, price: String(product.price), salePrice: String(product.salePrice || ''), cost: String(product.cost || 0), stock: String(product.stock || 0), description: product.description || '', categoryId: product.categoryId || '', categoryIds, seoTitle: product.seoTitle || '', seoDescription: product.seoDescription || '' })
+      setForm({ name: product.name, slug: product.slug, price: String(product.price), salePrice: String(product.salePrice || ''), cost: String(product.cost || 0), stock: String(product.stock || 0), description: product.description || '', categoryId: product.categoryId || '', categoryIds, seoTitle: product.seoTitle || '', seoDescription: product.seoDescription || '', gender: product.gender || '' })
       setImages(imgs.map(url => ({ id: Math.random().toString(36).slice(2), url })))
       setAutoSlug(false)
-      fetch(`${API_BASE}/api/v1/variants?productId=${product.id}`).then(r => r.ok ? r.json() : []).then(data => setVariants(Array.isArray(data) ? data : []))
-      fetch(`${API_BASE}/api/v1/products/${product.id}/related`).then(r => r.ok ? r.json() : { relatedProductIds: [], setProductIds: [] }).then(d => {
+      fetch(`/variants?productId=${product.id}`).then(r => r.ok ? r.json() : []).then(data => setVariants(Array.isArray(data) ? data : []))
+      fetch(`/products/${product.id}/related`).then(r => r.ok ? r.json() : { relatedProductIds: [], setProductIds: [] }).then(d => {
         const ids = Array.isArray(d?.relatedProductIds) ? d.relatedProductIds.filter((x: any) => typeof x === 'string' && x) : []
         const setIds = Array.isArray(d?.setProductIds) ? d.setProductIds.filter((x: any) => typeof x === 'string' && x) : []
         setRelatedIds(ids)
         setSetProductIds(setIds)
       }).catch(() => { setRelatedIds([]); setSetProductIds([]) })
       setMeasurementsLoading(true)
-      fetch(`${API_BASE}/api/v1/products/${product.id}/measurements`).then(r => r.ok ? r.json() : { measurements: {} }).then(d => {
+      fetch(`/products/${product.id}/measurements`).then(r => r.ok ? r.json() : { measurements: {} }).then(d => {
         try { setMeasurementsText(JSON.stringify(d?.measurements || {}, null, 2)) } catch { setMeasurementsText('') }
         setMeasurementsLoading(false)
       }).catch(() => { setMeasurementsText(''); setMeasurementsLoading(false) })
     } else {
-      setForm({ name:'', slug:'', price:'', salePrice:'', cost:'0', stock:'0', description:'', categoryId:'', categoryIds:[], seoTitle:'', seoDescription:'' })
+      setForm({ name:'', slug:'', price:'', salePrice:'', cost:'0', stock:'0', description:'', categoryId:'', categoryIds:[], seoTitle:'', seoDescription:'', gender:'' })
       setImages([]); setVariants([]); setAutoSlug(true)
       setRelatedIds([])
       setRelatedCategoryIds([])
@@ -321,7 +322,7 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
     setSaving(true); setError('')
     const existingUrls = images.filter(i => !i.file).map(i => i.url)
     const filesToUpload = images.filter(i => i.file).map(i => i.file!)
-    if (filesToUpload.length > 0) { setUploading(true); existingUrls.push(...await uploadImages(filesToUpload)); setUploading(false) }
+    if (filesToUpload.length > 0) { setUploading(true); existingUrls.push(...(await uploadImages(filesToUpload))); setUploading(false) }
     const reservedCategoryIds = new Set(categories.filter(c => ['sale', 'new'].includes(String(c.slug || '').toLowerCase())).map(c => c.id))
     const cleanCategoryIds = (form.categoryIds || []).filter(id => id && !reservedCategoryIds.has(id))
     const selectedCategoryId = (!reservedCategoryIds.has(form.categoryId) && form.categoryId) ? form.categoryId : (cleanCategoryIds[0] || '')
@@ -333,20 +334,20 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
       variantsToSend = variants.map(v => { const add = rem > 0 ? 1 : 0; if (rem > 0) rem -= 1; return { ...v, stock: base + add } })
       totalVariantStock = overallStock; setVariants(variantsToSend)
     }
-    const body: any = { name: form.name, price: parseFloat(form.price) || 0, salePrice: parseFloat(form.salePrice) || null, cost: parseFloat(form.cost) || 0, stock: variants.length ? totalVariantStock : overallStock, description: form.description, categoryIds: cleanCategoryIds, images: JSON.stringify(existingUrls), seoTitle: form.seoTitle, seoDescription: form.seoDescription }
+    const body: any = { name: form.name, price: parseFloat(form.price) || 0, salePrice: parseFloat(form.salePrice) || null, cost: parseFloat(form.cost) || 0, stock: variants.length ? totalVariantStock : overallStock, description: form.description, categoryIds: cleanCategoryIds, images: JSON.stringify(existingUrls), seoTitle: form.seoTitle, seoDescription: form.seoDescription, gender: form.gender || undefined }
     if (selectedCategoryId) body.categoryId = selectedCategoryId
     if (form.slug.trim()) body.slug = form.slug.trim()
-    const url = product ? `${API_BASE}/api/v1/products/${product.id}` : `${API_BASE}/api/v1/products`
+    const url = product ? `/products/${product.id}` : `/products`
     const res = await fetch(url, { method: product ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     if (res.ok) {
       const saved = await res.json()
-      if (variantsToSend.length > 0) await fetch(`${API_BASE}/api/v1/variants/batch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: saved.id, variants: variantsToSend }) })
+      if (variantsToSend.length > 0) await fetch(`/variants/batch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: saved.id, variants: variantsToSend }) })
       const mtxt = (measurementsText || '').trim()
-      if (mtxt) { try { const parsed = JSON.parse(mtxt); if (parsed && typeof parsed === 'object') await fetch(`${API_BASE}/api/v1/products/${saved.id}/measurements`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parsed) }) } catch {} }
-      await fetch(`${API_BASE}/api/v1/products/${saved.id}/related`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ relatedProductIds: relatedIds, relatedCategoryIds, setProductIds }) }).catch(() => null as any)
+      if (mtxt) { try { const parsed = JSON.parse(mtxt); if (parsed && typeof parsed === 'object') await fetch(`/products/${saved.id}/measurements`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parsed) }) } catch {} }
+      await fetch(`/products/${saved.id}/related`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ relatedProductIds: relatedIds, relatedCategoryIds, setProductIds }) }).catch(() => null as any)
       const shouldGenerate = Boolean(aiFile) || filesToUpload.length > 0
       if (shouldGenerate) {
-        setAiGenerating(true); setAiMessage('Запуск генерації...')
+        setAiGenerating(true); setAiMessage('Запуск генерації')
         const fd = new FormData()
         if (aiFile) fd.append('file', aiFile)
         if (aiFileBack) fd.append('fileBack', aiFileBack)
@@ -356,7 +357,7 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
           if (aiRes.ok) {
             const data = await aiRes.json()
             const m = data?.measurements
-            if (m && typeof m === 'object') { try { setMeasurementsText(JSON.stringify(m, null, 2)); await fetch(`${API_BASE}/api/v1/products/${saved.id}/measurements`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(m) }).catch(() => null as any) } catch {} }
+            if (m && typeof m === 'object') { try { setMeasurementsText(JSON.stringify(m, null, 2)); await fetch(`/products/${saved.id}/measurements`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(m) }).catch(() => null as any) } catch {} }
             setAiGenerating(false); setAiMessage(data.jobId ? `Генерація ${data.total || 6} фото запущена` : 'Завершено'); onSuccess(); onClose()
           } else { const errText = await aiRes.text(); let detail = ''; try { detail = JSON.parse(errText)?.detail || '' } catch {}; setAiGenerating(false); setAiMessage(aiRes.status === 429 ? 'Ліміт AI вичерпано' : detail ? `Помилка: ${detail}` : 'Помилка AI') }
         } catch { setAiGenerating(false); setAiMessage('Помилка') }
@@ -370,10 +371,10 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
     if (seed.length < 3) { setAiAutoError('Введіть опис товару'); return }
     setAiAutoLoading(true); setAiAutoError('')
     try {
-      const res = await fetch(`${API_BASE}/api/v1/products/ai-autofill`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: seed }) })
+      const res = await fetch(`/products/ai-autofill`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: seed }) })
       const data = await res.json().catch(() => null)
       if (!res.ok) { setAiAutoError(typeof data?.detail === 'string' ? data.detail : 'Помилка автозаповнення'); setAiAutoLoading(false); return }
-      setForm(prev => ({ ...prev, name: data?.name || prev.name, description: data?.description || prev.description, seoTitle: data?.seoTitle || prev.seoTitle, seoDescription: data?.seoDescription || prev.seoDescription, price: String(typeof data?.price === 'number' ? data.price : prev.price), salePrice: String(typeof data?.salePrice === 'number' ? (data.salePrice || '') : prev.salePrice), stock: String(typeof data?.stock === 'number' ? data.stock : prev.stock), categoryId: data?.categoryId || prev.categoryId, categoryIds: data?.categoryId ? [data.categoryId] : prev.categoryIds }))
+      setForm(prev => ({ ...prev, name: data?.name || prev.name, description: data?.description || prev.description, seoTitle: data?.seoTitle || prev.seoTitle, seoDescription: data?.seoDescription || prev.seoDescription, price: String(typeof data?.price === 'number' ? data.price : prev.price), salePrice: String(typeof data?.salePrice === 'number' ? (data.salePrice || '') : prev.salePrice), stock: String(typeof data?.stock === 'number' ? data.stock : prev.stock), categoryId: data?.categoryId || prev.categoryId, categoryIds: data?.categoryId ? [data.categoryId] : prev.categoryIds, gender: data?.audience || prev.gender }))
       if (data?.audience === 'female') setAiGender('female'); else if (data?.audience === 'male') setAiGender('male'); else setAiGender('unisex')
       const sizes = Array.isArray(data?.sizes) ? data.sizes.filter((s: any) => typeof s === 'string' && s) : []
       const colors = Array.isArray(data?.colors) ? data.colors.filter((c: any) => typeof c === 'string' && c) : []
@@ -459,13 +460,13 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
                 <Panel>
                   <SectionLabel>✦ Автозаповнення через AI</SectionLabel>
                   {aiAutoError && <div className="text-[12px] text-red-500 bg-red-50 rounded-lg px-3 py-2">{aiAutoError}</div>}
-                  <textarea value={aiAutoText} onChange={e => setAiAutoText(e.target.value)} rows={4} className={textareaCls} placeholder="Назва, категорія, кольори, розміри, ціна/знижка, залишок, ключові особливості..." />
+                  <textarea value={aiAutoText} onChange={e => setAiAutoText(e.target.value)} rows={4} className={textareaCls} placeholder="Назва, категорія, кольори, розміри, ціна/знижка, залишок, ключові особливості" />
                   <div className="flex items-center gap-2">
                     <button type="button" onClick={toggleVoice} className={`h-9 w-9 rounded-lg border text-[12px] font-medium transition flex items-center justify-center ${listening ? 'bg-red-50 border-red-200 text-red-600' : voiceSupported ? 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50' : 'bg-gray-50 border-gray-200 text-gray-400'}`} aria-label="voice input">
                       {listening ? <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" /></svg> : <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 14a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v4a3 3 0 0 0 3 3Z" /><path d="M19 11a7 7 0 0 1-14 0" strokeLinecap="round" /><path d="M12 18v3" strokeLinecap="round" /></svg>}
                     </button>
                     <button type="button" onClick={handleAutoFill} disabled={aiAutoLoading} className="h-9 px-4 rounded-lg bg-gray-900 text-white text-[12px] font-medium disabled:opacity-50 hover:bg-gray-800 transition whitespace-nowrap">
-                      {aiAutoLoading ? 'Автозаповнення...' : 'Заповнити поля'}
+                      {aiAutoLoading ? 'Автозаповнення' : 'Заповнити поля'}
                     </button>
                     <div className="text-[11px] text-gray-400 leading-tight">AI сформує назву, опис, SEO, категорію, ціни, розміри та кольори.</div>
                   </div>
@@ -497,7 +498,7 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
 
                 <Panel>
                   <SectionLabel>Опис</SectionLabel>
-                  <textarea value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))} rows={5} className={textareaCls} placeholder="Детальний опис товару..." />
+                  <textarea value={form.description} onChange={e => setForm(p => ({...p, description: e.target.value}))} rows={5} className={textareaCls} placeholder="Детальний опис товару" />
                 </Panel>
 
                 <Panel>
@@ -749,7 +750,7 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
                 <Panel>
                   <SectionLabel>Супутні товари</SectionLabel>
                   <div className="text-[11px] text-gray-400 mb-2">Товари, які можна купити разом</div>
-                  <input type="text" value={relatedQuery} onChange={e => setRelatedQuery(e.target.value)} placeholder="Пошук..." className={`${inputCls} mb-2`} />
+                  <input type="text" value={relatedQuery} onChange={e => setRelatedQuery(e.target.value)} placeholder="Пошук" className={`${inputCls} mb-2`} />
                   <div className="max-h-64 overflow-y-auto border border-gray-100 rounded-xl">
                     {(allProducts || [])
                       .filter(p => !product || p.id !== product.id)
@@ -809,7 +810,7 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
                 <Panel>
                   <SectionLabel>Заміри</SectionLabel>
                   {measurementsLoading ? (
-                    <div className="text-[11px] text-gray-400">Завантаження...</div>
+                    <div className="text-[11px] text-gray-400">Завантаження</div>
                   ) : (
                     <textarea value={measurementsText} onChange={e => setMeasurementsText(e.target.value)} rows={6} className={textareaCls} placeholder='{"XS": {"chest": 80, "waist": 60}}' />
                   )}
@@ -822,6 +823,14 @@ export function ProductForm({ isOpen, onClose, product, categories, onSuccess, a
             <div className="p-4 max-w-2xl mx-auto space-y-3">
               <Panel>
                 <SectionLabel>SEO налаштування</SectionLabel>
+                <Field label="Стать / аудиторія">
+                  <select value={form.gender} onChange={e => setForm(p => ({...p, gender: e.target.value}))} className={inputCls}>
+                    <option value="">— Не вибрано —</option>
+                    <option value="male">Хлопчик (male)</option>
+                    <option value="female">Дівчинка (female)</option>
+                    <option value="unisex">Унісекс (unisex)</option>
+                  </select>
+                </Field>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[12px] text-gray-500">Автозаповнення на основі назви</span>
                   <button type="button" onClick={() => setForm(p => ({ ...p, seoTitle: p.seoTitle || `${p.name} | VINESENT`, seoDescription: p.seoDescription || `Купити ${p.name} — якісний дитячий одяг від VINESENT.` }))} className="text-[11px] text-blue-500 hover:underline">Згенерувати</button>

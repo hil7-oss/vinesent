@@ -19,7 +19,7 @@ _IMAGE_SIGS = (b'\x89PNG', b'\xff\xd8', b'GIF8', b'RIFF', b'BM', b'\x00\x00\x01\
 
 
 @router.post("/upload")
-async def upload_file(file: UploadFile = File(...), user: dict = Depends(require_admin)):
+async def upload_file(file: UploadFile = File(), user: dict = Depends(require_admin)):
     """Upload image file with Cloudinary support and local fallback"""
     os.makedirs(UPLOADS_DIR, exist_ok=True)
     
@@ -62,7 +62,7 @@ async def upload_file(file: UploadFile = File(...), user: dict = Depends(require
     
     if use_cloudinary:
         try:
-            from ...services.cloudinary_service import upload_image
+            from fastapi_app.services.cloudinary_service import upload_image
             
             # Read file into memory
             image_bytes = await file.read()

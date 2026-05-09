@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useEffect, useState, useCallback } from 'react'
 import { formatPrice } from '@/lib/utils'
 
-const API_BASE = '/api/fastapi'
+const API_BASE = ''
 
 type OrderItem = { productId: string; quantity: number; price: number; name?: string; slug?: string; image?: string | null; size?: string; color?: string }
 type Order = {
@@ -333,8 +333,8 @@ export default function AdminOrdersPage() {
 
   const updateStatus = async (orderId: string, status: OrderStatus) => {
     const next = norm(status)
-    setOrders(p => p.map(o => o.id === orderId ? { ...o, status: next } : o))
-    setSelected(p => p?.id === orderId ? { ...p, status: next } : p)
+    setOrders(p => p.map(o => o.id === orderId ? { o, status: next } : o))
+    setSelected(p => p?.id === orderId ? { p, status: next } : p)
     try {
       const res = await fetch(`${API_BASE}/orders/${orderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) })
       if (!res.ok) await fetchOrders()

@@ -103,10 +103,10 @@
    │   name: "Куртка зимова",            │
    │   price: 1200,                      │
    │   stock: 57,                        │
-   │   ...                               │
+   │                                  │
    │ }                                   │
    │                                     │
-   │ Response: { id: "abc-123", ... }   │
+   │ Response: { id: "abc-123",  }   │
    └─────────────────────────────────────┘
                   │
                   ▼
@@ -115,7 +115,7 @@
    │ POST /api/v1/variants/batch         │
    │ {                                   │
    │   productId: "abc-123",             │
-   │   variants: [...]                   │
+   │   variants: []                   │
    │ }                                   │
    └─────────────────────────────────────┘
                   │
@@ -132,8 +132,8 @@
    │                                     │
    │ Return: [                           │
    │   {id:"v1",sku:"ABC123-104-000000", │
-   │    size:"104",color:"#000000",...}, │
-   │   ...                               │
+   │    size:"104",color:"#000000",}, │
+   │                                  │
    │ ]                                   │
    └─────────────────────────────────────┘
                   │
@@ -153,7 +153,7 @@
    │ ├─ {id:"v2", productId:"abc-123",  │
    │ │   size:"110", color:"#000000",    │
    │ │   stock:15, sku:"ABC123-110-000"} │
-   │ └─ ... (4 more)                     │
+   │ └─  (4 more)                     │
    └─────────────────────────────────────┘
 ```
 
@@ -294,7 +294,7 @@ const [form, setForm] = useState({
   name: '',
   price: '',
   stock: '0',
-  // ...
+  // 
 })
 
 const [variants, setVariants] = useState<Variant[]>([])
@@ -316,7 +316,7 @@ const addVariantRows = () => {
       })
     }
   }
-  setVariants([...variants, ...newVariants])
+  setVariants([variants, newVariants])
 }
 
 // When user saves product
@@ -360,7 +360,7 @@ Frontend                Backend                 Database
    │                       │                        │
    │  ❌ 400 Bad Request   │                        │
    │<──────────────────────┤                        │
-   │  {detail: "SKU..."}   │                        │
+   │  {detail: "SKU"}   │                        │
    │                       │                        │
    │  Show error message   │                        │
    │  "SKU вже існує"      │                        │

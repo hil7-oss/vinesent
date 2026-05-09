@@ -40,14 +40,14 @@ export default function ProductClientPage({ params }: { params: { slug: string }
     }
   }, [product])
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Завантаження...</div>
+  if (loading) return <div className="flex items-center justify-center min-h-screen">Завантаження</div>
   if (!product) return <div className="flex items-center justify-center min-h-screen">Товар не знайдено</div>
 
   const images = getAllImages(product.images)
   const mainImg = images[selectedImage] || images[0] || ''
 
   const variants = product.variants || []
-  const sizes = [...new Set(variants.map((v: any) => v.size))].sort()
+  const sizes = [new Set(variants.map((v: any) => v.size))].sort()
   const colors = product.colors || []
 
   const availableStock = variants

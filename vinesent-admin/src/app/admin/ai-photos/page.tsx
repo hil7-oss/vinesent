@@ -8,7 +8,7 @@ import { ProductWithAiStatus, PromptTemplate, GeneratedPhoto } from '@/types/ai-
 import { getFirstImage } from '@/lib/utils'
 
 // Simple UI components to avoid dependency on shadcn for this prototype if missing
-// In a real app, import from @/components/ui/...
+// In a real app, import from @/components/ui/
 
 const Tabs = ({ children, active, onChange }: any) => (
   <div className="space-y-4">
